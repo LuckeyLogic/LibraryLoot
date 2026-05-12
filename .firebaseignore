@@ -1,0 +1,29 @@
+# Files that should NEVER be deployed to Firebase Hosting.
+# Only the contents of `dist/` (the Vite build output) should ship.
+
+CLAUDE.md
+SPEC.md
+README.md
+LICENSE
+node_modules/
+src/
+public/
+scripts/
+docs/
+.git/
+.github/
+.firebase/
+.claude/
+.vscode/
+.idea/
+.gitignore
+.firebaseignore
+.env*
+*.log
+firebase-debug.log
+package.json
+package-lock.json
+vite.config.js
+jsdoc.config.json
+index.html
+temp folder for assets/

@@ -1,0 +1,79 @@
+/*  src/pages/Sponsor.module.css
+ */
+
+.wrap {
+  padding  : var(--space-2xl) var(--space-lg);
+  max-width: 860px;
+}
+
+.header {
+  text-align   : center;
+  margin-bottom: var(--space-xl);
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.9rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--loot-gold-bright);
+  margin         : 0 0 var(--space-sm);
+}
+
+.title {
+  font-family : var(--font-display);
+  font-size   : var(--fs-h1);
+  background  : linear-gradient(120deg, var(--loot-gold-bright), var(--neon-purple), var(--electric-blue));
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+  margin                 : 0 0 var(--space-md);
+}
+
+.lede {
+  color    : var(--hud-muted);
+  font-size: 1.1rem;
+  max-width: 56ch;
+  margin   : 0 auto;
+}
+
+.card {
+  margin       : var(--space-xl) 0;
+  padding      : var(--space-xl);
+  border       : var(--border-rare);
+  border-radius: var(--radius-lg);
+  background   : rgba(26, 20, 56, 0.6);
+  box-shadow   : 0 0 24px rgba(76, 201, 240, 0.18);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-size  : 1.4rem;
+  color      : var(--loot-gold-bright);
+  margin     : 0 0 var(--space-md);
+}
+
+.acceptList {
+  margin      : 0;
+  padding-left: 1.25rem;
+  color       : var(--hud-white);
+}
+
+.acceptList li {
+  margin-bottom: var(--space-xs);
+}
+
+.contactBlock {
+  margin       : var(--space-md) 0;
+  padding      : var(--space-md);
+  background   : rgba(157, 78, 221, 0.12);
+  border-left  : 3px solid var(--neon-purple);
+  border-radius: var(--radius-sm);
+}
+
+.fineprint {
+  margin-top: var(--space-xl);
+  color     : var(--hud-muted);
+  font-size : var(--fs-small);
+  text-align: center;
+}

@@ -1,0 +1,157 @@
+// src/pages/Privacy.jsx
+//
+// Privacy Policy. Pre-launch draft — COPPA-aware shape but a real attorney
+// should review before the program accepts its first real challenge.
+//
+// Created by Miguel Brown on 5/12/26.
+// Copyright (c) 2026 Luckey Logic LLC. All rights reserved.
+
+import React              from 'react'
+import { Link }           from 'react-router-dom'
+
+import Disclaimer         from '../components/Disclaimer.jsx'
+
+import siteContent        from '../data/siteContent.js'
+
+import styles             from './Legal.module.css'
+
+/**
+ * Privacy — Privacy Policy page.
+ *
+ * @returns {JSX.Element}
+ */
+export default function Privacy() {
+
+  // `support` is the per-tenant operator contact. Falls back to siteContent
+  // defaults today; ITEM 2 will pull live values from /{tenantId}/_main.support.
+  const { brand, support } = siteContent
+
+  return (
+    <article className={`container ${styles.legalWrap}`}>
+
+      <header className={styles.header}>
+        <p className={styles.eyebrow}>Legal</p>
+        <h1 className={styles.title}>Privacy Policy</h1>
+        <p className="muted">Effective: 2026-05-12 · Operated by {support.organizationName}</p>
+      </header>
+
+      <div className={styles.draftBanner}>
+        <strong>DRAFT.</strong> This document is a pre-launch draft. It reflects our
+        intended COPPA approach and will be reviewed by counsel before the platform
+        accepts its first real challenge.
+      </div>
+
+      <section>
+        <h2>1. What we collect</h2>
+        <p>From adults (parents, guardians, sponsors, librarians):</p>
+        <ul>
+          <li>Display name and email (Firebase Authentication).</li>
+          <li>Account role (parent, librarian, admin).</li>
+          <li>Sponsorship records (which prizes a sponsor has donated).</li>
+          <li>Audit records of administrative actions taken (for accountability).</li>
+        </ul>
+
+        <p>From children (entered by their parent/guardian):</p>
+        <ul>
+          <li>First name only.</li>
+          <li>Birth year only — no full date of birth.</li>
+          <li>Reading-challenge activity: which books were accepted, quiz answers,
+              completion status, prizes won.</li>
+        </ul>
+
+        <p>
+          We do <strong>not</strong> collect last names, photos, addresses, phone
+          numbers, or email addresses for children. We do not allow children to log
+          in directly — every action involving a child is taken by their parent or
+          guardian through the parent&apos;s account.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. How we use it</h2>
+        <p>
+          Information is used only to run the reading-challenge program: to track
+          challenge progress, run prize draws, recognize donors, and operate the
+          library&apos;s instance. We do not sell data, run advertising, or share
+          data with third parties beyond the service providers that host the
+          platform (described below).
+        </p>
+      </section>
+
+      <section>
+        <h2>3. Service providers</h2>
+        <ul>
+          <li><strong>Firebase / Google Cloud</strong> — hosting, authentication,
+              database, file storage, and serverless functions.</li>
+          <li><strong>Open Library</strong> / Google Books — book metadata and
+              cover images (queries use ISBN only; no child data is sent).</li>
+          <li><strong>Vertex AI (Gemini)</strong> — used to draft candidate quiz
+              questions from a book&apos;s metadata. No child data is ever sent
+              to the AI; only the book&apos;s public metadata.</li>
+          <li><strong>drand</strong> / random.org — public randomness sources for
+              the prize draw. No personal data is sent.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. COPPA — Children&apos;s Online Privacy</h2>
+        <p>
+          {brand.name} is designed around COPPA from the ground up. Children do not
+          have direct accounts. A parent or guardian must create the account, accept
+          this Privacy Policy, and add each child as a sub-profile.
+        </p>
+        <p>
+          Parents have the right at any time to:
+        </p>
+        <ul>
+          <li>Review the information collected about their child.</li>
+          <li>Request changes or corrections.</li>
+          <li>Delete the child&apos;s sub-profile and associated activity.</li>
+          <li>Refuse further data collection.</li>
+        </ul>
+        <p>
+          Requests can be made in-app through the parent dashboard, or by emailing
+          the operator of this Library Loot instance at
+          {' '}<a href={`mailto:${support.coppaContactEmail}`}>{support.coppaContactEmail}</a>.
+          We respond within 30 days.
+        </p>
+      </section>
+
+      <section>
+        <h2>5. Retention</h2>
+        <p>
+          Child profile data is retained while the child is an active participant
+          and for a reasonable period after, to support the parent&apos;s ability
+          to review past activity. Inactive profiles (no activity for 18 months)
+          are archived and then deleted. Prize draw audit records are retained in
+          anonymized form (child identifiers replaced with &ldquo;deleted&rdquo;)
+          to preserve the platform&apos;s public auditability.
+        </p>
+      </section>
+
+      <section>
+        <h2>6. Security</h2>
+        <p>
+          Data is stored in Firebase (Firestore + Storage) with security rules
+          that enforce per-tenant isolation. Only authenticated users with the
+          appropriate role can access their own data. We do not store passwords —
+          authentication is delegated to Firebase Authentication, which uses
+          industry-standard hashing.
+        </p>
+      </section>
+
+      <Disclaimer tone="prominent" />
+
+      <section>
+        <h2>7. Contact</h2>
+        <p>
+          For privacy questions or COPPA requests, email the operator of this
+          instance at
+          {' '}<a href={`mailto:${support.coppaContactEmail}`}>{support.coppaContactEmail}</a>.
+          For an overview of the program, see <Link to="/about">About the program</Link>.
+        </p>
+      </section>
+
+    </article>
+  )
+}

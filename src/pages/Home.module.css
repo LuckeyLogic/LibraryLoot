@@ -1,0 +1,203 @@
+/*  src/pages/Home.module.css
+ */
+
+/* ── HERO ── */
+.hero {
+  position           : relative;
+  min-height         : 620px;
+  padding            : var(--space-2xl) 0;
+  overflow           : hidden;
+  background-color   : var(--night);
+  background-size    : cover;
+  background-position: center;
+  background-repeat  : no-repeat;
+  display            : flex;
+  align-items        : center;
+}
+
+/* Dark gradient overlay keeps the headline readable on top of the photo. */
+.heroOverlay {
+  position      : absolute;
+  inset         : 0;
+  background    :
+    linear-gradient(180deg, rgba(13, 10, 31, 0.35) 0%, rgba(13, 10, 31, 0.85) 100%),
+    radial-gradient(circle at 80% 30%, rgba(157, 78, 221, 0.25), transparent 55%);
+  pointer-events: none;
+  z-index       : 0;
+}
+
+.heroInner {
+  position     : relative;
+  z-index      : 1;
+  text-align   : center;
+  display      : flex;
+  flex-direction: column;
+  align-items  : center;
+  gap          : var(--space-md);
+}
+
+.heroLogo {
+  width        : min(560px, 80vw);
+  height       : auto;
+  margin       : 0 auto var(--space-md);
+  filter       : drop-shadow(0 8px 30px rgba(13, 10, 31, 0.85)) drop-shadow(0 0 22px rgba(157, 78, 221, 0.4));
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 1rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--loot-gold-bright);
+  margin         : 0;
+}
+
+.headline {
+  font-family : var(--font-display);
+  font-size   : clamp(2rem, 4.5vw, 3.25rem);
+  line-height : 1.05;
+  margin      : 0;
+  background  : linear-gradient(120deg, var(--loot-gold-bright) 0%, var(--hud-white) 50%, var(--electric-blue) 100%);
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+  text-shadow            : 0 4px 30px rgba(0, 0, 0, 0.6);
+}
+
+.subhead {
+  font-size : 1.1rem;
+  color     : var(--hud-white);
+  max-width : 56ch;
+  margin    : 0 auto;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.heroCtaRow {
+  display       : flex;
+  gap           : var(--space-md);
+  flex-wrap     : wrap;
+  justify-content: center;
+  margin-top    : var(--space-md);
+}
+
+@media (max-width: 720px) {
+  .hero { min-height: 540px; }
+}
+
+/* ── HOW IT WORKS ── */
+.howSection {
+  background: linear-gradient(180deg, transparent, rgba(76, 201, 240, 0.05), transparent);
+}
+
+.stepGrid {
+  display              : grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap                  : var(--space-lg);
+}
+
+.stepCard {
+  background     : rgba(26, 20, 56, 0.65);
+  border         : 1px solid rgba(157, 78, 221, 0.35);
+  border-radius  : var(--radius-md);
+  padding        : var(--space-lg);
+  box-shadow     : var(--shadow-card);
+  display        : flex;
+  flex-direction : column;
+  gap            : var(--space-sm);
+  transition     : transform 0.18s ease, border-color 0.18s ease;
+}
+
+.stepCard:hover {
+  transform   : translateY(-4px);
+  border-color: var(--electric-blue);
+}
+
+.stepBadge {
+  display        : inline-flex;
+  align-items    : center;
+  justify-content: center;
+  width          : 38px;
+  height         : 38px;
+  border-radius  : var(--radius-pill);
+  background     : linear-gradient(135deg, var(--neon-purple), var(--electric-blue));
+  color          : var(--hud-white);
+  font-family    : var(--font-display);
+}
+
+.stepTitle {
+  font-family: var(--font-display);
+  font-size  : 1.1rem;
+  margin     : var(--space-xs) 0;
+}
+
+.stepBody {
+  color : var(--hud-muted);
+  margin: 0;
+}
+
+/* ── PRIZES ── */
+.prizesSection {
+  background: linear-gradient(180deg, transparent, rgba(255, 182, 39, 0.04), transparent);
+}
+
+.sectionLede {
+  color     : var(--hud-muted);
+  text-align: center;
+  max-width : 60ch;
+  margin    : 0 auto var(--space-xl);
+}
+
+.prizeGrid {
+  display     : flex;
+  flex-wrap   : wrap;
+  gap         : var(--space-md);
+  justify-content: center;
+  list-style  : none;
+  margin      : 0 0 var(--space-lg);
+  padding     : 0;
+}
+
+.prizeChip {
+  font-family    : var(--font-display);
+  font-size      : 0.9rem;
+  letter-spacing : 0.05em;
+  text-transform : uppercase;
+  padding        : 0.6rem 1.2rem;
+  border-radius  : var(--radius-pill);
+  background     : rgba(26, 20, 56, 0.85);
+  color          : var(--hud-white);
+  border         : 1px solid rgba(183, 175, 216, 0.25);
+  box-shadow     : 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.tone_rare      { border-color: var(--rare-blue);       box-shadow: 0 0 16px rgba(76, 201, 240, 0.35); }
+.tone_epic      { border-color: var(--epic-purple);     box-shadow: 0 0 16px rgba(177, 74, 237, 0.45); }
+.tone_legendary { border-color: var(--legendary-gold);  box-shadow: 0 0 18px rgba(255, 182, 39, 0.5);  }
+
+/* ── SPONSOR CTA ── */
+.sponsorSection {
+  background: radial-gradient(circle at 50% 50%, rgba(157, 78, 221, 0.15), transparent 70%);
+}
+
+.sponsorInner {
+  text-align: center;
+  max-width : 720px;
+}
+
+.sponsorTitle {
+  font-family : var(--font-display);
+  font-size   : var(--fs-h1);
+  margin      : 0 0 var(--space-md);
+}
+
+.sponsorBody {
+  color    : var(--hud-muted);
+  font-size: 1.1rem;
+  margin   : 0 0 var(--space-lg);
+}
+
+.sponsorFineprint {
+  margin-top: var(--space-lg);
+  font-size : var(--fs-small);
+  color     : var(--hud-muted);
+}

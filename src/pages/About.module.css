@@ -1,0 +1,103 @@
+/*  src/pages/About.module.css
+ */
+
+.aboutWrap {
+  padding: var(--space-2xl) var(--space-lg);
+  max-width: 860px;
+}
+
+.header {
+  margin-bottom: var(--space-xl);
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.9rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--loot-gold-bright);
+  margin         : 0 0 var(--space-sm);
+}
+
+.title {
+  font-family : var(--font-display);
+  font-size   : var(--fs-h1);
+  background  : linear-gradient(120deg, var(--loot-gold-bright), var(--neon-purple), var(--electric-blue));
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+  margin                 : 0 0 var(--space-md);
+}
+
+.lede {
+  font-size: 1.2rem;
+  color    : var(--hud-muted);
+  margin   : 0;
+}
+
+.section {
+  margin-bottom: var(--space-xl);
+}
+
+.section h2 {
+  font-family   : var(--font-display);
+  font-size     : var(--fs-h2);
+  color         : var(--hud-white);
+  margin-bottom : var(--space-md);
+  padding-bottom: var(--space-xs);
+  border-bottom : 1px solid rgba(157, 78, 221, 0.35);
+}
+
+/* ── ORIGIN STORY ── */
+.storySection {
+  display              : grid;
+  grid-template-columns: minmax(0, 1fr) 1.4fr;
+  gap                  : var(--space-xl);
+  align-items          : center;
+  padding              : var(--space-xl);
+  border               : var(--border-epic);
+  border-radius        : var(--radius-lg);
+  background           : rgba(26, 20, 56, 0.55);
+  box-shadow           : var(--shadow-glow);
+}
+
+.storySection h2 {
+  border-bottom: none;
+  padding-bottom: 0;
+  background    : linear-gradient(120deg, var(--loot-gold-bright), var(--neon-purple));
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+}
+
+.storyImageWrap {
+  position     : relative;
+  border-radius: var(--radius-md);
+  overflow     : hidden;
+  border       : var(--border-legendary);
+  box-shadow   : var(--shadow-loot);
+}
+
+.storyImage {
+  display: block;
+  width  : 100%;
+  height : auto;
+}
+
+.storyCopy p {
+  color    : var(--hud-white);
+  font-size: 1.05rem;
+}
+
+.storySignoff {
+  margin-top : var(--space-md);
+  font-style : italic;
+  color      : var(--loot-gold-bright);
+}
+
+@media (max-width: 720px) {
+  .storySection {
+    grid-template-columns: 1fr;
+    padding              : var(--space-lg);
+  }
+}

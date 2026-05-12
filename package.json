@@ -1,0 +1,31 @@
+{
+  "name": "library-loot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Community-funded reading rewards platform for libraries.",
+  "license": "MIT",
+  "author": "Luckey Logic LLC",
+  "homepage": "https://github.com/LuckeyLogic/LibraryLoot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LuckeyLogic/LibraryLoot.git"
+  },
+  "scripts": {
+    "dev":     "vite",
+    "build":   "vite build",
+    "preview": "vite preview",
+    "docs":    "jsdoc -c jsdoc.config.json"
+  },
+  "dependencies": {
+    "firebase":         "^10.14.0",
+    "react":            "^18.3.1",
+    "react-dom":        "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdoc":                "^4.0.4",
+    "vite":                 "^5.4.11"
+  }
+}

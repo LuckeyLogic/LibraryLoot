@@ -1,0 +1,29 @@
+/*  src/components/Disclaimer.module.css
+ */
+
+.disclaimer {
+  border-radius: var(--radius-md);
+  padding      : var(--space-md) var(--space-lg);
+  margin       : var(--space-lg) 0;
+}
+
+.soft {
+  background : rgba(183, 175, 216, 0.08);
+  border-left: 3px solid var(--hud-muted);
+}
+
+.prominent {
+  background : linear-gradient(135deg, rgba(157, 78, 221, 0.15), rgba(76, 201, 240, 0.10));
+  border     : 1px solid rgba(157, 78, 221, 0.5);
+}
+
+.text {
+  margin    : 0;
+  font-size : var(--fs-small);
+  color     : var(--hud-muted);
+  line-height: 1.55;
+}
+
+.prominent .text {
+  color: var(--hud-white);
+}

@@ -1,0 +1,209 @@
+/*  src/index.css
+ *
+ *  Global theme + base styles for Library Loot.
+ *  Fortnite-inspired palette (electric purple / neon blue / loot gold) with no
+ *  Fortnite branding. All colors and fonts are CSS variables — components must
+ *  never hardcode hex values or font names.
+ *
+ *  Created by Miguel Brown on 5/12/26.
+ *  Copyright (c) 2026 Luckey Logic LLC. All rights reserved.
+ */
+
+:root {
+  /* ── PALETTE ── */
+  --night            : #0d0a1f;
+  --night-soft       : #1a1438;
+  --night-mid        : #251c4d;
+  --hud-white        : #f5f3ff;
+  --hud-muted        : #b7afd8;
+
+  --neon-purple      : #9d4edd;
+  --neon-purple-deep : #7b2cbf;
+  --electric-blue    : #4cc9f0;
+  --electric-blue-bright: #00b4d8;
+  --loot-gold        : #ffb627;
+  --loot-gold-bright : #ffd166;
+  --hud-cyan         : #80ffea;
+  --magenta-pop      : #ff006e;
+
+  --rare-blue        : #4cc9f0;
+  --epic-purple      : #b14aed;
+  --legendary-gold   : #ffb627;
+
+  /* ── TYPOGRAPHY ── */
+  --font-display     : 'Bungee', 'Impact', 'Arial Black', sans-serif;
+  --font-body        : 'Nunito', system-ui, -apple-system, sans-serif;
+
+  --fs-hero          : clamp(2.5rem, 6vw, 5rem);
+  --fs-h1            : clamp(2rem, 4vw, 3rem);
+  --fs-h2            : clamp(1.5rem, 3vw, 2.25rem);
+  --fs-h3            : 1.25rem;
+  --fs-body          : 1rem;
+  --fs-small         : 0.875rem;
+  --fs-micro         : 0.75rem;
+
+  /* ── SPACING ── */
+  --space-xs         : 0.25rem;
+  --space-sm         : 0.5rem;
+  --space-md         : 1rem;
+  --space-lg         : 1.5rem;
+  --space-xl         : 2.5rem;
+  --space-2xl        : 4rem;
+
+  /* ── SHAPE ── */
+  --radius-sm        : 6px;
+  --radius-md        : 12px;
+  --radius-lg        : 20px;
+  --radius-pill      : 999px;
+
+  /* ── EFFECTS ── */
+  --shadow-glow      : 0 0 24px rgba(157, 78, 221, 0.45);
+  --shadow-card      : 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-loot      : 0 0 32px rgba(255, 182, 39, 0.55);
+
+  --border-hud       : 2px solid var(--electric-blue);
+  --border-rare      : 2px solid var(--rare-blue);
+  --border-epic      : 2px solid var(--epic-purple);
+  --border-legendary : 2px solid var(--legendary-gold);
+
+  /* ── LAYOUT ── */
+  --container-max    : 1200px;
+  --navbar-height    : 72px;
+}
+
+/* ── RESET ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin : 0;
+  padding: 0;
+  height : 100%;
+}
+
+body {
+  font-family     : var(--font-body);
+  font-size       : var(--fs-body);
+  line-height     : 1.55;
+  color           : var(--hud-white);
+  background      : var(--night);
+  background-image:
+    radial-gradient(circle at 10% 10%,  rgba(157, 78, 221, 0.18) 0, transparent 40%),
+    radial-gradient(circle at 90% 30%,  rgba(76, 201, 240, 0.14) 0, transparent 45%),
+    radial-gradient(circle at 50% 90%,  rgba(255, 182, 39, 0.10) 0, transparent 50%);
+  background-attachment: fixed;
+  min-height      : 100vh;
+  -webkit-font-smoothing : antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img, svg {
+  display  : block;
+  max-width: 100%;
+}
+
+a {
+  color          : var(--electric-blue);
+  text-decoration: none;
+  transition     : color 0.15s ease;
+}
+
+a:hover {
+  color: var(--loot-gold-bright);
+}
+
+button {
+  font-family: inherit;
+  cursor     : pointer;
+}
+
+h1, h2, h3, h4 {
+  font-family   : var(--font-display);
+  font-weight   : 400;
+  letter-spacing: 0.02em;
+  line-height   : 1.1;
+  margin        : 0 0 var(--space-md);
+  color         : var(--hud-white);
+}
+
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); }
+
+p { margin: 0 0 var(--space-md); }
+
+/* ── GLOBAL UTILITIES ── */
+.container {
+  width    : 100%;
+  max-width: var(--container-max);
+  margin   : 0 auto;
+  padding  : 0 var(--space-lg);
+}
+
+.section {
+  padding: var(--space-2xl) 0;
+}
+
+.section-title {
+  font-family   : var(--font-display);
+  font-size     : var(--fs-h2);
+  text-align    : center;
+  margin-bottom : var(--space-xl);
+  background    : linear-gradient(90deg, var(--neon-purple), var(--electric-blue));
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+}
+
+.btn {
+  display        : inline-flex;
+  align-items    : center;
+  justify-content: center;
+  gap            : var(--space-sm);
+  padding        : 0.75rem 1.5rem;
+  font-family    : var(--font-display);
+  font-size      : 1rem;
+  letter-spacing : 0.05em;
+  text-transform : uppercase;
+  border         : none;
+  border-radius  : var(--radius-md);
+  cursor         : pointer;
+  transition     : transform 0.12s ease, box-shadow 0.18s ease;
+}
+
+.btn:hover  { transform: translateY(-2px); }
+.btn:active { transform: translateY(0);    }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--neon-purple), var(--neon-purple-deep));
+  color     : var(--hud-white);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--electric-blue-bright), var(--electric-blue));
+  color     : var(--night);
+}
+
+.btn-loot {
+  background: linear-gradient(135deg, var(--loot-gold-bright), var(--loot-gold));
+  color     : var(--night);
+  box-shadow: var(--shadow-loot);
+}
+
+.btn-ghost {
+  background: transparent;
+  color     : var(--hud-white);
+  border    : var(--border-hud);
+}
+
+.muted { color: var(--hud-muted); }
+
+.legal-fine {
+  font-size : var(--fs-micro);
+  color     : var(--hud-muted);
+  line-height: 1.4;
+}

@@ -1,0 +1,66 @@
+/*  src/pages/Legal.module.css
+ *
+ *  Shared layout for ToS and Privacy pages.
+ */
+
+.legalWrap {
+  padding  : var(--space-2xl) var(--space-lg);
+  max-width: 820px;
+}
+
+.header {
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid rgba(157, 78, 221, 0.35);
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.85rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--electric-blue);
+  margin         : 0 0 var(--space-sm);
+}
+
+.title {
+  font-family : var(--font-display);
+  font-size   : var(--fs-h1);
+  color       : var(--hud-white);
+  margin      : 0 0 var(--space-sm);
+}
+
+.draftBanner {
+  background   : rgba(255, 0, 110, 0.12);
+  border       : 1px solid var(--magenta-pop);
+  color        : var(--hud-white);
+  padding      : var(--space-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-xl);
+  font-size    : var(--fs-small);
+}
+
+.legalWrap section {
+  margin-bottom: var(--space-xl);
+}
+
+.legalWrap h2 {
+  font-family   : var(--font-display);
+  font-size     : 1.5rem;
+  color         : var(--loot-gold-bright);
+  margin-bottom : var(--space-md);
+}
+
+.legalWrap ul {
+  color    : var(--hud-muted);
+  padding-left: 1.25rem;
+  margin   : 0 0 var(--space-md);
+}
+
+.legalWrap li {
+  margin-bottom: var(--space-xs);
+}
+
+.legalWrap a {
+  color: var(--electric-blue);
+}
