@@ -385,10 +385,14 @@ Broken into shippable sub-items so each is a clean PR.
 - `scripts/seed-tenant.js` + `scripts/package.json` + `scripts/README.md` — one-off provisioning script that creates `/{tenantId}/_main` with defaults and prints a setup token plaintext to stdout. Authenticates via `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a service-account JSON kept outside the repo.
 - Artifact Registry container cleanup policy: 7 days (matches sara-sorts pattern).
 
-#### [ ] ITEM 2c — Real Per-Tenant Firestore + Storage Rules
+#### [✅] ITEM 2c — Real Per-Tenant Firestore + Storage Rules + Tenant-Claim Bootstrap
 
-- Replace deny-all stubs with rules that check `request.auth.token.tenant` and `request.auth.token.admin`
-- Test against the real claims now in place
+- New Cloud Function `bootstrapTenantClaim` — HTTPS-callable, idempotent. Sets the caller's `tenant` custom claim (v1: hardcoded `luckey-logic`) and creates `/{tenant}/_main/users/{uid}` with `role: 'parent'` if missing. Fast-path early-returns if the claim is already set.
+- AuthContext effect — on every sign-in, if `claims.tenant` is missing, calls `bootstrapTenantClaim`, then force-refreshes the ID token so the new claim arrives in client state immediately. Runs at most once per session.
+- `claimSetupToken` updated — admin upgrade now merges into the existing parent user doc (created by `bootstrapTenantClaim`) instead of overwriting. `createdAt` is preserved; new field `promotedToAdminAt` records the admin upgrade timestamp.
+- One-off `scripts/backfill-user-claims.js` — walks existing Firebase Auth users, sets the `tenant` claim and creates the user doc for any missing it. Ran clean: 1 user, already set up.
+- New `firestore.rules` — per-tenant boundaries via `request.auth.token.tenant`. Helpers: `inTenant(tenantId)`, `isTenantAdmin(tenantId)`, `isSelf(uid)`. Coverage: `_setup_tokens` server-only; `_main` tenant-read/admin-write; users read by self or admin / write deny (server-only); children CRUD by parent or admin. Future collections (books, prizes, sponsors, challenges, redemptions, sponsorInquiries) get rules added per item.
+- New `storage.rules` — public read on `/{tenant}/assets/**`, `/{tenant}/sponsors/{sponsorId}/**`, `/{tenant}/books/{bookId}/**`; admin-write on all of those; deny by default elsewhere.
 
 #### [ ] ITEM 2d — Parent Dashboard + Child Sub-Profiles
 

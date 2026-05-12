@@ -21,8 +21,10 @@ setGlobalOptions({
 });
 
 // ── HTTPS CALLABLES ──
+const {bootstrapTenantClaim} = require("./src/bootstrapTenantClaim");
 const {claimSetupToken} = require("./src/claimSetupToken");
 const {issueSetupToken} = require("./src/issueSetupToken");
 
+exports.bootstrapTenantClaim = bootstrapTenantClaim;
 exports.claimSetupToken = claimSetupToken;
 exports.issueSetupToken = issueSetupToken;

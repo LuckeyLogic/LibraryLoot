@@ -97,7 +97,10 @@ exports.claimSetupToken = onCall({region: REGION}, async (request) => {
       usedBy: auth.uid,
     });
 
-    // Create / merge the new admin's user doc under the tenant root.
+    // Merge into the new admin's user doc under the tenant root. The doc
+    // may already exist (created by bootstrapTenantClaim at first sign-in)
+    // with role: "parent" — we upgrade in place. createdAt is intentionally
+    // NOT overwritten so it keeps reflecting the original signup time.
     const userRef = db
         .collection(claimedTenant)
         .doc("_main")
@@ -113,7 +116,7 @@ exports.claimSetupToken = onCall({region: REGION}, async (request) => {
       provider: userToken.firebase && userToken.firebase.sign_in_provider ?
           userToken.firebase.sign_in_provider :
           null,
-      createdAt: FieldValue.serverTimestamp(),
+      promotedToAdminAt: FieldValue.serverTimestamp(),
     }, {merge: true});
   });
 

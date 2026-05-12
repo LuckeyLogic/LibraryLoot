@@ -1,32 +1,43 @@
 rules_version = '2';
 
-// Library Loot — Firebase Storage Security Rules
+// Library Loot — Firebase Storage Security Rules (ITEM 2c)
 //
-// Boundary: every Storage path is scoped to a tenant root. v1 hosts only
-// the `luckey-logic` tenant. New tenants are added by Luckey Logic when
-// they're provisioned (see SPEC.md §2 + §8).
-//
-// Public assets (hero image, branding, story portrait) live under
-// /{tenantId}/assets/** and are read-publicly by every browser that loads
-// the site. Everything else is deny-by-default; reads and writes will be
-// gated on tenant-scoped auth claims in ITEM 2.
+// Multi-tenant: every Storage object lives under a path that begins with
+// the tenant ID. Public-read where appropriate (site branding, book covers,
+// sponsor logos shown on the public Donors wall). Writes restricted to
+// tenant admins. Cloud Functions / Firebase Extensions (Resize Images)
+// bypass these rules via Admin SDK.
 
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // ── PUBLIC ASSETS ──
-    // Site branding + hero + origin-story image. Anyone can read; only
-    // admins (set up in ITEM 2) can write. Until ITEM 2 wires auth, the
-    // tenant operator uploads via the Firebase Console (which authenticates
-    // as the project owner and bypasses these rules).
+    // ── PUBLIC TENANT ASSETS ──
+    // Hero, branding, origin-story portrait. Anyone on the web reads;
+    // only admins of this tenant write.
     match /{tenantId}/assets/{allPaths=**} {
       allow read : if true;
-      allow write: if false;
+      allow write: if request.auth != null
+                    && request.auth.token.tenant == tenantId
+                    && request.auth.token.admin == true;
     }
 
-    // ── EVERYTHING ELSE ──
-    // Deny by default. Sponsor logos, book covers, user uploads, etc. all
-    // get explicit allow rules added in the items that introduce them.
+    // ── SPONSOR LOGOS ── (public read for Donors wall)
+    match /{tenantId}/sponsors/{sponsorId}/{file=**} {
+      allow read : if true;
+      allow write: if request.auth != null
+                    && request.auth.token.tenant == tenantId
+                    && request.auth.token.admin == true;
+    }
+
+    // ── BOOK COVERS ── (public read, cached from Open Library)
+    match /{tenantId}/books/{bookId}/{file=**} {
+      allow read : if true;
+      allow write: if request.auth != null
+                    && request.auth.token.tenant == tenantId
+                    && request.auth.token.admin == true;
+    }
+
+    // ── DEFAULT: deny ──
     match /{allPaths=**} {
       allow read, write: if false;
     }

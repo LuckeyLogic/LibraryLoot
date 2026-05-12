@@ -35,7 +35,9 @@ import {
   updateProfile
 }                                  from 'firebase/auth'
 
-import { auth }                    from '../firebase'
+import { httpsCallable }            from 'firebase/functions'
+
+import { auth, functions }          from '../firebase'
 
 const AuthContext = createContext(null)
 
@@ -94,7 +96,7 @@ export function AuthProvider({ children }) {
       if (fbUser) {
         try {
           // forceRefresh = true so we always pick up the latest custom
-          // claims (set by Cloud Functions when ITEM 2b lands).
+          // claims (set by Cloud Functions in ITEM 2b / 2c).
           const tokenResult = await fbUser.getIdTokenResult(true)
           setUser(fbUser)
           setClaims(tokenResult.claims)
@@ -110,6 +112,42 @@ export function AuthProvider({ children }) {
     })
     return () => unsubscribe()
   }, [])
+
+  // ── TENANT CLAIM AUTO-BOOTSTRAP ──
+  // If a signed-in user is missing the tenant claim, call the
+  // `bootstrapTenantClaim` Cloud Function to set it + create their
+  // parent user doc. Idempotent server-side, so multiple-callers /
+  // tab-races are safe. Runs at most once per user per browser session.
+  useEffect(() => {
+    if (loading)              return
+    if (!user)                return
+    if (claims && claims.tenant) return     // Already bootstrapped.
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const bootstrap = httpsCallable(functions, 'bootstrapTenantClaim')
+        await bootstrap({})
+        if (cancelled) return
+        // Force-refresh the ID token to pick up the newly-set claim.
+        if (auth.currentUser) {
+          const refreshed = await auth.currentUser.getIdTokenResult(true)
+          if (cancelled) return
+          setUser({ ...auth.currentUser })
+          setClaims(refreshed.claims)
+        }
+      } catch (e) {
+        // Non-fatal: the user is still signed in, just without a tenant
+        // claim. Rules will deny them until the next sign-in retries.
+        // Log to the browser console so the operator can spot the issue
+        // — common cause is Cloud Functions still propagating after deploy.
+        // eslint-disable-next-line no-console
+        console.warn('bootstrapTenantClaim failed; will retry next sign-in.', e)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [user, claims, loading])
 
   // ── SIGN-IN METHODS ──
 
