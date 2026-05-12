@@ -10,6 +10,7 @@ import { Routes, Route }      from 'react-router-dom'
 
 import Navbar                 from './components/Navbar.jsx'
 import Footer                 from './components/Footer.jsx'
+import PrivateRoute           from './components/PrivateRoute.jsx'
 
 import Home                   from './pages/Home.jsx'
 import About                  from './pages/About.jsx'
@@ -17,6 +18,7 @@ import Donors                 from './pages/Donors.jsx'
 import Sponsor                from './pages/Sponsor.jsx'
 import Login                  from './pages/Login.jsx'
 import Signup                 from './pages/Signup.jsx'
+import AdminSetup             from './pages/AdminSetup.jsx'
 import Terms                  from './pages/Terms.jsx'
 import Privacy                from './pages/Privacy.jsx'
 import NotFound               from './pages/NotFound.jsx'
@@ -42,6 +44,14 @@ export default function App() {
           <Route path="/sponsor" element={<Sponsor />} />
           <Route path="/login"   element={<Login />}   />
           <Route path="/signup"  element={<Signup />}  />
+          <Route
+            path   ="/admin/setup"
+            element={
+              <PrivateRoute>
+                <AdminSetup />
+              </PrivateRoute>
+            }
+          />
           <Route path="/terms"   element={<Terms />}   />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="*"        element={<NotFound />} />

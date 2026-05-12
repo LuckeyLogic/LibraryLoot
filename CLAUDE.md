@@ -375,13 +375,15 @@ Broken into shippable sub-items so each is a clean PR.
 - Project Support email set to `libraryloot@luckeylogic.com` in Firebase Console
 - Build: 79 modules, 475 KB JS / 130 KB gzipped (Firebase Auth SDK adds ~280 KB JS — could code-split later)
 
-#### [ ] ITEM 2b — First-Admin Setup-Token Flow + Cloud Functions
+#### [✅] ITEM 2b — First-Admin Setup-Token Flow + Cloud Functions
 
-- Cloud Function `claimSetupToken({ token })` — verifies hashed token in `/_setup_tokens/{hash}`, sets `{ admin: true, tenant: '<id>' }` custom claims, creates user doc, marks token used
-- Cloud Function `issueSetupToken()` — callable by an existing admin to generate a fresh token for a new admin invite
-- `/admin/setup` route — UI for the first admin to paste their token after signing in
-- `AdminRoute` wrapper — gates routes on `claims.admin === true`
-- `scripts/seed-tenant.js` — one-off provisioning script that creates `/{tenantId}/_main` with defaults and prints a setup token plaintext to stdout
+- Cloud Function `claimSetupToken({ token })` deployed in `us-central1` (2nd gen, Node 22). Verifies SHA-256-hashed token, runs the consume+write+claim flow in a Firestore transaction, then sets `{ admin: true, tenant }` custom claims via Admin SDK. Single-use; 30-day TTL enforced at claim time.
+- Cloud Function `issueSetupToken({ note })` deployed in `us-central1`. Caller must already have `admin: true` claim and a `tenant` claim. Generates 32 bytes hex, stores hash, returns plaintext once.
+- `functions/src/setupTokens.js` — shared `hashSetupToken` helper.
+- `/admin/setup` route in the app (gated by `PrivateRoute` — must sign in first). UI calls `claimSetupToken` via `httpsCallable`, force-refreshes the ID token on success so claims propagate to the AuthContext.
+- `src/components/AdminRoute.jsx` — wraps a route, redirects to `/login` if unauthenticated or `/` if signed in but not admin. Built but not yet attached to any routes; 2c+ admin pages will use it.
+- `scripts/seed-tenant.js` + `scripts/package.json` + `scripts/README.md` — one-off provisioning script that creates `/{tenantId}/_main` with defaults and prints a setup token plaintext to stdout. Authenticates via `GOOGLE_APPLICATION_CREDENTIALS` env var pointing to a service-account JSON kept outside the repo.
+- Artifact Registry container cleanup policy: 7 days (matches sara-sorts pattern).
 
 #### [ ] ITEM 2c — Real Per-Tenant Firestore + Storage Rules
 

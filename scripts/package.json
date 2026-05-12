@@ -1,0 +1,15 @@
+{
+  "name": "library-loot-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Operator scripts for Library Loot (tenant provisioning, export/import).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "seed-tenant":   "node seed-tenant.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.6.0"
+  }
+}
