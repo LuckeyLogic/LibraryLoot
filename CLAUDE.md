@@ -334,20 +334,23 @@ Status legend: `[ ]` not started, `[~]` in progress, `[✅]` done.
 - JSDoc on every component
 - `npm run build` passes
 
-### [ ] ITEM 1 — Firebase Project Wiring + Initial Deploy
+### [✅] ITEM 1 — Firebase Project Wiring + Initial Deploy
 
-- Wire real Firebase Web App config into `src/firebase.js`
-- `firebase init` → Firestore, Functions (Node 22), Hosting, Storage
-- Deploy security rule stubs (deny-by-default)
-- Upload the three optimized assets currently in `public/assets/` to Firebase Storage at `/luckey-logic/assets/`:
-  - `library-loot-hero-bg.jpg` (hero)
-  - `summer-of-library-loot.png` (logo)
-  - `jambo.jpg` (origin-story image)
-- Update `siteContent.js` URLs from `/assets/...` (public/) to the Firebase Storage download URLs
-- Delete `public/assets/` (no longer needed — assets live in Storage)
-- **Delete the `temp folder for assets/` directory** (already gitignored; remove from local filesystem)
-- GitHub Actions workflows: `firebase-hosting-merge.yml` + `firebase-hosting-pull-request.yml`
-- First deploy to confirm pipeline works end-to-end
+- Real Firebase Web App config wired into `src/firebase.js` (project ID `library-loot`)
+- `firebase init` completed for Firestore, Functions, Hosting, Storage, Remote Config, Extensions
+- Hosting reconfigured from the Web Frameworks experiment to traditional static hosting (`"public": "dist"`) with SPA rewrite for React Router and aggressive cache headers (1 year immutable on `/assets/**`, no-cache on `*.html`)
+- Functions Node engine pinned to 22 (default was 24)
+- Security Rules deployed (`firebase deploy --only firestore:rules,storage`):
+  - Firestore: deny-by-default (real per-tenant rules land with ITEM 2)
+  - Storage: public-read on `/{tenantId}/assets/**`, deny-by-default everywhere else
+- Three optimized assets uploaded to Storage and wired into `siteContent.js`:
+  - `luckey-logic/assets/hero/library-loot-hero-bg.jpg`
+  - `luckey-logic/assets/branding/summer-of-library-loot.png`
+  - `luckey-logic/assets/story/jambo.jpg`
+- `public/assets/` deleted (now in Storage)
+- `temp folder for assets/` deleted (PNG originals no longer needed)
+- GitHub Actions workflows generated: `firebase-hosting-merge.yml` (push to main → live) + `firebase-hosting-pull-request.yml` (PR → preview channel)
+- `FIREBASE_SERVICE_ACCOUNT_LIBRARY_LOOT` GitHub secret installed by `firebase init hosting:github`
 
 ### [ ] ITEM 2 — Auth + Roles + First-Admin Bootstrap
 
@@ -435,3 +438,4 @@ Status legend: `[ ]` not started, `[~]` in progress, `[✅]` done.
 - Fan Content Policy stance: keep the hero PNG with Fortnite-character likenesses, ship with prominent disclaimers in the footer and in About / ToS / Privacy, make the art easily swappable at first sign of pushback. No commercial use anywhere in the pipeline.
 - Origin story added: Jackson (Miguel's son) asked if he could earn V-Bucks for reading books at the school book fair — that's the entire idea. The fan-art-style portrait `JAMBO.png` sits in a dedicated story section on the About page.
 - ITEM 0 complete: Vite/React scaffold, theme, layout shell, six pages, hero bg + Summer of Library Loot logo wired in, origin-story section on About. Assets currently served from `public/assets/`; ITEM 1 migrates them to Firebase Storage.
+- ITEM 1 complete: Firebase project wired in (`library-loot`); `firebase init` set up Firestore + Functions (Node 22) + Hosting (static, not the Web Frameworks experiment) + Storage; deny-by-default rules deployed except public-read on `/{tenantId}/assets/**`; three optimized assets uploaded to Storage under `/luckey-logic/assets/{hero,branding,story}/`; `public/assets/` and `temp folder for assets/` deleted; GitHub Actions workflows installed with `FIREBASE_SERVICE_ACCOUNT_LIBRARY_LOOT` secret. The new transparent-background logo (RGBA, alpha=0 in corners) replaces the earlier flood-filled version. First push triggers the live deploy via Actions.

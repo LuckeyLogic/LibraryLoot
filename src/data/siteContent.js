@@ -44,9 +44,11 @@ const siteContent = {
     primaryCtaPath   : '/books',
     secondaryCtaLabel: 'Sponsor a prize',
     secondaryCtaPath : '/sponsor',
-    // Served from public/ for v1. ITEM 1 migrates to Firebase Storage and updates these URLs.
-    imageUrl     : '/assets/library-loot-hero-bg.jpg',
-    logoUrl      : '/assets/summer-of-library-loot.png'
+    // Served from Firebase Storage under /luckey-logic/assets/. Swap = upload
+    // new file in the Storage console + replace the URL. Per-tenant assets
+    // live under their own root collection key.
+    imageUrl     : 'https://firebasestorage.googleapis.com/v0/b/library-loot.firebasestorage.app/o/luckey-logic%2Fassets%2Fhero%2Flibrary-loot-hero-bg.jpg?alt=media&token=4ee41908-b25d-432b-9f48-e36686c867cf',
+    logoUrl      : 'https://firebasestorage.googleapis.com/v0/b/library-loot.firebasestorage.app/o/luckey-logic%2Fassets%2Fbranding%2Fsummer-of-library-loot.png?alt=media&token=6aad1c3a-3eea-40f0-a88d-5d326d5b8db6'
   },
 
   // ── ORIGIN STORY ──
@@ -57,7 +59,7 @@ const siteContent = {
     title    : 'Where Library Loot started',
     body     : 'This whole thing started when my kid came home from his school book fair and asked if he could buy a book. Two minutes later he asked if he could earn V-Bucks for reading books. That second question is the entire idea. Kids already love the things we want them to love books less than. So we built a way to use what they love to get them to the thing we want them to love.',
     signoff  : '— Miguel, founder of Luckey Logic. The kid in the portrait goes by JAMBO.',
-    imageUrl : '/assets/jambo.jpg',
+    imageUrl : 'https://firebasestorage.googleapis.com/v0/b/library-loot.firebasestorage.app/o/luckey-logic%2Fassets%2Fstory%2Fjambo.jpg?alt=media&token=ca560378-97ff-45fb-a623-8dcd2d7bd9d3',
     imageAlt : 'JAMBO — fan-art-style portrait of the original Library Loot reader, holding V-Bucks coins beside a loot chest.'
   },
 

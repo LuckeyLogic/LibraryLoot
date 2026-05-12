@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// Library Loot — Firebase Storage Security Rules
+//
+// Boundary: every Storage path is scoped to a tenant root. v1 hosts only
+// the `luckey-logic` tenant. New tenants are added by Luckey Logic when
+// they're provisioned (see SPEC.md §2 + §8).
+//
+// Public assets (hero image, branding, story portrait) live under
+// /{tenantId}/assets/** and are read-publicly by every browser that loads
+// the site. Everything else is deny-by-default; reads and writes will be
+// gated on tenant-scoped auth claims in ITEM 2.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── PUBLIC ASSETS ──
+    // Site branding + hero + origin-story image. Anyone can read; only
+    // admins (set up in ITEM 2) can write. Until ITEM 2 wires auth, the
+    // tenant operator uploads via the Firebase Console (which authenticates
+    // as the project owner and bypasses these rules).
+    match /{tenantId}/assets/{allPaths=**} {
+      allow read : if true;
+      allow write: if false;
+    }
+
+    // ── EVERYTHING ELSE ──
+    // Deny by default. Sponsor logos, book covers, user uploads, etc. all
+    // get explicit allow rules added in the items that introduce them.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
