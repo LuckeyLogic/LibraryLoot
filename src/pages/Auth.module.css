@@ -1,0 +1,196 @@
+/*  src/pages/Auth.module.css
+ *
+ *  Shared layout for /login and /signup. Both pages use the same card-style
+ *  form container, Google button, divider, email/password inputs, and
+ *  error block.
+ */
+
+.authWrap {
+  display        : flex;
+  align-items    : center;
+  justify-content: center;
+  min-height     : calc(100vh - var(--navbar-height) - 240px); /* footer-aware */
+  padding        : var(--space-2xl) var(--space-lg);
+}
+
+.card {
+  width        : 100%;
+  max-width    : 460px;
+  padding      : var(--space-xl);
+  background   : rgba(26, 20, 56, 0.7);
+  border       : var(--border-epic);
+  border-radius: var(--radius-lg);
+  box-shadow   : var(--shadow-glow);
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.85rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--electric-blue);
+  margin         : 0 0 var(--space-sm);
+}
+
+.title {
+  font-family   : var(--font-display);
+  font-size     : 1.75rem;
+  background    : linear-gradient(120deg, var(--loot-gold-bright), var(--neon-purple));
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+  margin                 : 0 0 var(--space-sm);
+}
+
+.subtitle {
+  color    : var(--hud-muted);
+  margin   : 0 0 var(--space-lg);
+  font-size: var(--fs-small);
+}
+
+/* ── GOOGLE BUTTON ── */
+.googleBtn {
+  width          : 100%;
+  display        : flex;
+  align-items    : center;
+  justify-content: center;
+  gap            : var(--space-sm);
+  padding        : 0.75rem 1rem;
+  background     : var(--hud-white);
+  color          : #202124;
+  border         : none;
+  border-radius  : var(--radius-md);
+  font-family    : var(--font-body);
+  font-size      : 0.95rem;
+  font-weight    : 700;
+  cursor         : pointer;
+  transition     : transform 0.12s ease, box-shadow 0.18s ease;
+}
+
+.googleBtn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); }
+.googleBtn:disabled {
+  opacity: 0.6;
+  cursor : not-allowed;
+  transform: none;
+}
+
+.googleIcon { width: 18px; height: 18px; }
+
+/* ── DIVIDER ── */
+.divider {
+  display      : flex;
+  align-items  : center;
+  gap          : var(--space-md);
+  margin       : var(--space-lg) 0;
+  color        : var(--hud-muted);
+  font-size    : var(--fs-small);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.divider::before,
+.divider::after {
+  content : '';
+  flex    : 1;
+  height  : 1px;
+  background: rgba(183, 175, 216, 0.25);
+}
+
+/* ── EMAIL/PASSWORD FORM ── */
+.form {
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-md);
+}
+
+.field {
+  display       : flex;
+  flex-direction: column;
+  gap           : 0.35rem;
+}
+
+.label {
+  font-size     : var(--fs-small);
+  color         : var(--hud-muted);
+  font-weight   : 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.input {
+  width        : 100%;
+  padding      : 0.7rem 0.85rem;
+  background   : rgba(13, 10, 31, 0.7);
+  color        : var(--hud-white);
+  border       : 1px solid rgba(183, 175, 216, 0.3);
+  border-radius: var(--radius-sm);
+  font-family  : var(--font-body);
+  font-size    : 1rem;
+  transition   : border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus {
+  outline   : none;
+  border-color: var(--electric-blue);
+  box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.18);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+/* ── CHECKBOXES (signup) ── */
+.checkRow {
+  display    : flex;
+  align-items: flex-start;
+  gap        : var(--space-sm);
+  color      : var(--hud-white);
+  font-size  : var(--fs-small);
+  line-height: 1.45;
+}
+
+.checkRow input[type="checkbox"] {
+  margin-top: 4px;
+  width     : 18px;
+  height    : 18px;
+  accent-color: var(--neon-purple);
+  cursor    : pointer;
+  flex      : 0 0 auto;
+}
+
+.checkRow label { cursor: pointer; }
+
+/* ── SUBMIT ── */
+.submit {
+  margin-top: var(--space-sm);
+  width     : 100%;
+}
+
+.submit:disabled {
+  opacity: 0.55;
+  cursor : not-allowed;
+  transform: none;
+}
+
+/* ── ERROR + FOOT ── */
+.error {
+  margin-top   : var(--space-md);
+  padding      : 0.7rem 0.85rem;
+  background   : rgba(255, 0, 110, 0.12);
+  border       : 1px solid var(--magenta-pop);
+  color        : var(--hud-white);
+  border-radius: var(--radius-sm);
+  font-size    : var(--fs-small);
+}
+
+.foot {
+  margin-top: var(--space-lg);
+  text-align: center;
+  color     : var(--hud-muted);
+  font-size : var(--fs-small);
+}
+
+.foot a {
+  color         : var(--electric-blue);
+  font-weight   : 700;
+}

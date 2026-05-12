@@ -7,7 +7,9 @@
 // Copyright (c) 2026 Luckey Logic LLC. All rights reserved.
 
 import React, { useState }    from 'react'
-import { Link, NavLink }      from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+
+import { useAuth }            from '../context/AuthContext.jsx'
 
 import siteContent            from '../data/siteContent.js'
 
@@ -20,15 +22,35 @@ const links = [
 ]
 
 /**
- * Navbar — sticky top navigation with brand mark and primary links.
+ * Navbar — sticky top navigation with brand mark and primary links plus
+ * an auth slot on the right (Sign in / Sign up when signed out, display
+ * name + Sign out when signed in).
  *
  * @returns {JSX.Element}
  */
 export default function Navbar() {
 
-  const [open, setOpen] = useState(false)
+  const { user, signOut } = useAuth()
+  const navigate          = useNavigate()
+  const [open, setOpen]   = useState(false)
 
   const closeMenu = () => setOpen(false)
+
+  const handleSignOut = async () => {
+    closeMenu()
+    try {
+      await signOut()
+      navigate('/', { replace: true })
+    } catch (e) {
+      // signOut() already surfaced via context error; swallow here.
+    }
+  }
+
+  const greeting = user
+    ? (user.displayName && user.displayName.trim().length > 0
+        ? user.displayName.split(' ')[0]
+        : user.email)
+    : null
 
   return (
     <header className={styles.navWrap}>
@@ -65,6 +87,42 @@ export default function Navbar() {
               {label}
             </NavLink>
           ))}
+
+          <span className={styles.navDivider} aria-hidden="true" />
+
+          {user ? (
+            <>
+              <span className={styles.greeting} title={user.email || ''}>
+                Hi, {greeting}
+              </span>
+              <button
+                type      ="button"
+                onClick   ={handleSignOut}
+                className ={styles.navAction}
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink
+                to        ="/login"
+                onClick   ={closeMenu}
+                className ={({ isActive }) =>
+                  `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`
+                }
+              >
+                Sign in
+              </NavLink>
+              <Link
+                to        ="/signup"
+                onClick   ={closeMenu}
+                className ={styles.navCta}
+              >
+                Sign up
+              </Link>
+            </>
+          )}
         </nav>
 
       </div>

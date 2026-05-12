@@ -249,12 +249,17 @@ src/index.css
 src/firebase.js
 src/firebase/tenant.js
 src/data/siteContent.js
+src/context/AuthContext.jsx
 src/components/Navbar.jsx
 src/components/Footer.jsx
 src/components/Disclaimer.jsx
+src/components/PrivateRoute.jsx
 src/pages/Home.jsx
 src/pages/About.jsx
 src/pages/Donors.jsx
+src/pages/Sponsor.jsx
+src/pages/Login.jsx
+src/pages/Signup.jsx
 src/pages/Terms.jsx
 src/pages/Privacy.jsx
 src/pages/NotFound.jsx
@@ -266,6 +271,9 @@ index.html
 LICENSE
 README.md
 SPEC.md
+firebase.json
+firestore.rules
+storage.rules
 jsdoc.config.json
 ```
 
@@ -352,19 +360,45 @@ Status legend: `[ ]` not started, `[~]` in progress, `[✅]` done.
 - GitHub Actions workflows generated: `firebase-hosting-merge.yml` (push to main → live) + `firebase-hosting-pull-request.yml` (PR → preview channel)
 - `FIREBASE_SERVICE_ACCOUNT_LIBRARY_LOOT` GitHub secret installed by `firebase init hosting:github`
 
-### [ ] ITEM 2 — Auth + Roles + First-Admin Bootstrap
+### ITEM 2 — Auth + Roles + First-Admin Bootstrap (sliced)
 
-- Firebase Auth providers: Google Sign-In, Email/Password, Facebook
-- `AuthContext` + `useAuth` hook
-- `PrivateRoute` + `AdminRoute` wrappers
-- Custom claims: `{ admin: bool, tenant: string }` set ONLY by Cloud Functions, never written from the client
-- **First-admin setup-token flow** (see SPEC.md §8):
-  - Cloud Function `claimSetupToken({ token })` — verifies hashed token in `/_setup_tokens/{hash}`, sets custom claims, creates user doc, marks token used
-  - `/admin/setup` route in the app — UI for the first admin to paste their token after signing in
-  - Cloud Function `issueSetupToken()` — callable by an existing admin to generate a fresh token for a new admin invite (emails the new admin a one-time link)
-- Parent account page; UI to create child sub-profiles (first name only, optional birth year, no email, no last name)
-- Firestore Security Rules enforcing tenant + role boundaries (deny by default; allow if `request.auth.token.tenant == resource path tenant`)
-- Settings panel for admins to edit `/{tenantId}/_main.support` block (organizationName, programContactEmail, coppaContactEmail, etc.) — the About / Privacy / Terms pages start reading these live values instead of the siteContent defaults
+Broken into shippable sub-items so each is a clean PR.
+
+#### [✅] ITEM 2a — Auth providers + AuthContext + login/signup UI
+
+- Firebase Auth providers enabled in console: Google + Email/Password (Facebook deferred — small standalone follow-up if needed)
+- `src/context/AuthContext.jsx` — `AuthProvider` + `useAuth` hook. Exposes `user`, `claims` (forward-looking, populated in 2b), `loading`, `error`, `isAdmin`, `tenantClaim`, plus `signInWithGoogle` / `signInWithEmail` / `signUpWithEmail` / `signOut`. ID token refreshed on every auth-state change so latest custom claims arrive immediately when 2b sets them.
+- `src/components/PrivateRoute.jsx` — wraps a route; redirects to `/login` with `location.state.from` set so post-sign-in can bounce back. Built early; no routes use it until 2d.
+- `src/pages/Login.jsx` + shared `Auth.module.css` — Google button + email/password form
+- `src/pages/Signup.jsx` — same shell + two required consent checkboxes (18+ self-attestation + Privacy Policy / Terms acceptance). Submit gated on both checked. Google button also gated.
+- Navbar — shows display name + Sign out when signed in; Sign in / Sign up when signed out
+- Project Support email set to `libraryloot@luckeylogic.com` in Firebase Console
+- Build: 79 modules, 475 KB JS / 130 KB gzipped (Firebase Auth SDK adds ~280 KB JS — could code-split later)
+
+#### [ ] ITEM 2b — First-Admin Setup-Token Flow + Cloud Functions
+
+- Cloud Function `claimSetupToken({ token })` — verifies hashed token in `/_setup_tokens/{hash}`, sets `{ admin: true, tenant: '<id>' }` custom claims, creates user doc, marks token used
+- Cloud Function `issueSetupToken()` — callable by an existing admin to generate a fresh token for a new admin invite
+- `/admin/setup` route — UI for the first admin to paste their token after signing in
+- `AdminRoute` wrapper — gates routes on `claims.admin === true`
+- `scripts/seed-tenant.js` — one-off provisioning script that creates `/{tenantId}/_main` with defaults and prints a setup token plaintext to stdout
+
+#### [ ] ITEM 2c — Real Per-Tenant Firestore + Storage Rules
+
+- Replace deny-all stubs with rules that check `request.auth.token.tenant` and `request.auth.token.admin`
+- Test against the real claims now in place
+
+#### [ ] ITEM 2d — Parent Dashboard + Child Sub-Profiles
+
+- `/account` parent page
+- Create / edit / delete child sub-profile UI (first name only, optional birth year)
+- Stock-avatar picker (~12 fan-art Fortnite avatars in Storage; child doc references `avatarId`). No photo upload, no AI generation — see project_library_loot.md memory + Privacy Policy stance
+- Writes to `/{tenant}/_main/users/{uid}/children/{childId}`
+
+#### [ ] ITEM 2e — Admin Settings Panel
+
+- `/admin/settings` editor for the `_main.support` block (organization name, program contact, COPPA contact)
+- About / Privacy / Terms pull live values from the tenant doc instead of `siteContent.support` defaults
 
 ### [ ] ITEM 3 — Book Management (Admin)
 

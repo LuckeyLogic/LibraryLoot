@@ -76,6 +76,77 @@
   background: rgba(255, 182, 39, 0.12);
 }
 
+/* ── AUTH SLOT ── */
+.navDivider {
+  width    : 1px;
+  height   : 24px;
+  background: rgba(183, 175, 216, 0.25);
+  margin   : 0 var(--space-xs);
+}
+
+.greeting {
+  font-family   : var(--font-display);
+  font-size     : 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color         : var(--hud-muted);
+  padding       : 0.4rem 0.4rem;
+  max-width     : 12ch;
+  overflow      : hidden;
+  text-overflow : ellipsis;
+  white-space   : nowrap;
+}
+
+.navAction {
+  font-family   : var(--font-display);
+  font-size     : 0.9rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color         : var(--hud-muted);
+  background    : transparent;
+  border        : 1px solid rgba(183, 175, 216, 0.35);
+  border-radius : var(--radius-sm);
+  padding       : 0.4rem 0.7rem;
+  cursor        : pointer;
+  transition    : color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.navAction:hover {
+  color       : var(--hud-white);
+  border-color: var(--neon-purple);
+  background  : rgba(157, 78, 221, 0.18);
+}
+
+.navCta {
+  font-family   : var(--font-display);
+  font-size     : 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color         : var(--night);
+  background    : linear-gradient(135deg, var(--loot-gold-bright), var(--loot-gold));
+  border-radius : var(--radius-pill);
+  padding       : 0.45rem 1rem;
+  text-decoration: none;
+  box-shadow    : 0 0 14px rgba(255, 182, 39, 0.35);
+  transition    : transform 0.12s ease, box-shadow 0.18s ease;
+}
+
+.navCta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 22px rgba(255, 182, 39, 0.55);
+  color    : var(--night);
+}
+
+@media (max-width: 760px) {
+  .navDivider {
+    display: none;
+  }
+  .greeting, .navAction, .navCta {
+    width: 100%;
+    text-align: center;
+  }
+}
+
 .toggle {
   display      : none;
   flex-direction: column;
