@@ -143,9 +143,15 @@ export function AuthProvider({ children }) {
       const cred = await createUserWithEmailAndPassword(auth, email, password)
       if (displayName) {
         await updateProfile(cred.user, { displayName })
+        await cred.user.reload()
+        // onAuthStateChanged already fired with displayName=null. updateProfile
+        // does NOT re-fire the listener, so manually sync the local user state
+        // to the post-update auth.currentUser. Shallow-clone so React sees a
+        // new reference and rerenders consumers.
+        if (auth.currentUser) {
+          setUser({ ...auth.currentUser })
+        }
       }
-      // Force-refresh so onAuthStateChanged picks up the new displayName.
-      await cred.user.reload()
     } catch (e) {
       const msg = readableAuthError(e)
       setError(msg)

@@ -46,11 +46,19 @@ export default function Navbar() {
     }
   }
 
-  const greeting = user
-    ? (user.displayName && user.displayName.trim().length > 0
-        ? user.displayName.split(' ')[0]
-        : user.email)
-    : null
+  // Greeting precedence: displayName first name → email local-part (first
+  // segment before any dot) → generic fallback. Never the full email — it's
+  // long, sensitive-feeling, and the cap-12-char ellipsis was hiding the @ symbol.
+  const greeting = (() => {
+    if (!user) return null
+    if (user.displayName && user.displayName.trim().length > 0) {
+      return user.displayName.trim().split(' ')[0]
+    }
+    if (user.email) {
+      return user.email.split('@')[0].split('.')[0]
+    }
+    return 'there'
+  })()
 
   return (
     <header className={styles.navWrap}>
