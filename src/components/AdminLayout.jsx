@@ -18,6 +18,7 @@ import styles             from './AdminLayout.module.css'
 const adminLinks = [
   { to: '/admin',          label: 'Overview', end: true },
   { to: '/admin/settings', label: 'Settings'            },
+  { to: '/admin/books',    label: 'Books'               },
   { to: '/admin/avatars',  label: 'Avatars'             }
 ]
 

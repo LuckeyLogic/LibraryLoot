@@ -23,6 +23,7 @@ import Signup                 from './pages/Signup.jsx'
 import AdminSetup             from './pages/AdminSetup.jsx'
 import AdminIndex             from './pages/admin/AdminIndex.jsx'
 import AdminSettings          from './pages/admin/AdminSettings.jsx'
+import AdminBooks             from './pages/admin/AdminBooks.jsx'
 import AdminAvatars           from './pages/admin/AdminAvatars.jsx'
 import FAQ                    from './pages/FAQ.jsx'
 import ForParents             from './pages/ForParents.jsx'
@@ -78,6 +79,7 @@ export default function App() {
           >
             <Route index            element={<AdminIndex />}    />
             <Route path="settings"  element={<AdminSettings />} />
+            <Route path="books"     element={<AdminBooks />}    />
             <Route path="avatars"   element={<AdminAvatars />}  />
           </Route>
           <Route path="/faq"          element={<FAQ />}        />

@@ -88,5 +88,14 @@ service cloud.firestore {
       allow read : if true;
       allow write: if isTenantAdmin(tenantId);
     }
+
+    // ── BOOKS (admin-curated catalog) ──
+    // Books admins add to the library's active reward shelf. Public-read
+    // so anonymous visitors browsing /books and kids reading the home
+    // page can see the catalog. Admin-write only.
+    match /{tenantId}/_main/books/{bookId} {
+      allow read : if true;
+      allow write: if isTenantAdmin(tenantId);
+    }
   }
 }

@@ -465,13 +465,36 @@ Broken into shippable sub-items so each is a clean PR.
 - Output: `docs/` (gitignored). Generate locally with `npm run docs`.
 - **Not deployed yet** — kept local for v1. Future task: serve at `library-loot.web.app/docs/` via a Firebase Hosting rewrite or as a separate Hosting target.
 
-### [ ] ITEM 3 — Book Management (Admin)
+### ITEM 3 — Book Management (sliced)
 
-- ISBN/barcode scanner (`@zxing/browser`)
-- Open Library API integration (fallback: Google Books)
-- Admin "Add Book" flow: scan → fetch metadata + cover → review → save
-- Book detail page (public read)
-- Firestore: `/{tenant}/_main/books/{bookId}`
+#### [✅] ITEM 3a — Admin book CRUD + Open Library / Google Books lookup
+
+- New `src/utils/isbn.js` — normalize / validate ISBN-10 and ISBN-13 with checksums; convert ISBN-10 → canonical ISBN-13. The ISBN-13 is the Firestore document ID for each book (uniqueness for free).
+- New `src/utils/bookLookup.js` — fetches book metadata client-side. Open Library primary (`/api/books?bibkeys=ISBN:...&format=json&jscmd=data`); Google Books fallback (`/books/v1/volumes?q=isbn:...`). Both browser-callable (CORS-enabled, no auth). Returns a normalized `{ isbn13, title, authors, publishedYear, coverUrl, summary, source }`. Tolerates 404s and empty results gracefully so the form can degrade to manual entry.
+- New `/admin/books` page (`src/pages/admin/AdminBooks.jsx`). Three concerns in one page:
+  1. **ISBN lookup**: paste an ISBN → "Look up book" → review/edit pane appears with the fetched metadata. Duplicate-detection warns if the ISBN is already in the catalog.
+  2. **Review / edit form**: editable cover URL, title, authors (comma-separated input → string[] on save), year, reading level (Early reader / Grade 3-5 / Middle grade / YA / Not specified), summary. Cover preview renders inline as you edit the URL. If the lookup found nothing, the form opens blank with the ISBN prefilled and a "couldn't find this — type it in by hand" hint.
+  3. **Catalog grid**: live `onSnapshot` of the books collection. Cards show cover, title, authors (clamped to 2 lines + ellipsis), year + reading level + quiz status. Per-card actions: **Active toggle** (gold pill when active; flips with one tap), **Edit**, **Delete** (with confirmation). Inactive books are dimmed and tagged.
+- Book Firestore doc shape:
+  ```js
+  { id: '<isbn13>', isbn13, title, authors: string[], coverUrl, publishedYear,
+    readingLevel, summary, source: 'open-library' | 'google-books' | 'manual',
+    active: true, quizApproved: false, addedBy, addedAt, updatedAt }
+  ```
+- `firestore.rules` — added `/{tenantId}/_main/books/{bookId}` block: public read (the catalog is publicly browseable on /books when ITEM 3c lands; the home page also reads it), admin write. Deployed to `library-loot`.
+- `AdminLayout` sidebar — added "Books" nav entry between Settings and Avatars.
+
+#### [ ] ITEM 3b — Camera-based ISBN barcode scanner
+
+- Add `@zxing/browser` dependency
+- New `src/components/IsbnScanner.jsx` — camera UI that auto-fills the ISBN field on `/admin/books`
+- Permissions UX (camera prompt), fallback to manual entry if denied
+
+#### [ ] ITEM 3c — Public book browse + per-book detail page
+
+- `/books` — public catalog grid, only `active: true` books
+- `/books/:isbn` — per-book detail (cover, summary, "Accept challenge" CTA gated on sign-in)
+- Home page surfaces a live count of active books with rewards
 
 ### [ ] ITEM 4 — Prize Management (Admin) + Donor Recognition + Sponsor Intake
 
