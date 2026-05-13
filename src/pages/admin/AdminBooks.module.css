@@ -53,6 +53,17 @@
   box-shadow : 0 0 0 3px rgba(76, 201, 240, 0.18);
 }
 
+.scanBtn {
+  display    : inline-flex;
+  align-items: center;
+  gap        : 0.4rem;
+}
+
+.scanGlyph {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
 /* ── EDITOR CARD ── */
 .editorCard {
   margin-bottom: var(--space-xl);

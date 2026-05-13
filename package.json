@@ -21,6 +21,7 @@
     "build:all":        "npm run build && npm run docs && rm -rf dist/docs && cp -r docs dist/docs"
   },
   "dependencies": {
+    "@zxing/browser":   "^0.2.0",
     "firebase":         "^10.14.0",
     "react":            "^18.3.1",
     "react-dom":        "^18.3.1",

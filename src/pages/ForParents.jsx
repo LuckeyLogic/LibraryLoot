@@ -152,6 +152,17 @@ export default function ForParents() {
           and prevents the "claim a hundred books to lock other kids out" failure
           mode.
         </p>
+        <p>
+          Books are labeled with an age range. Books with broad appeal — Harry
+          Potter, Percy Jackson — are labeled <em>"ages 8 and up"</em> with no upper
+          bound, so older kids can still pick them. Books strictly targeted at
+          younger readers (picture books, early readers) have a maximum age too,
+          which triggers a gentle warning if your high-schooler picks one. The
+          librarian sees the warning at approval. You can leave a comment for the
+          librarian on the challenge if there&apos;s a good reason your kid wants
+          to read outside their normal range (a kid with a learning difference
+          re-reading a favorite, for example).
+        </p>
       </section>
 
       {/* ── 5 — READ + QUIZ ── */}

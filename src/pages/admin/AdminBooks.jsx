@@ -27,6 +27,8 @@ import {
 
 import { useAuth }                             from '../../context/AuthContext.jsx'
 
+import IsbnScanner                             from '../../components/IsbnScanner.jsx'
+
 import {
   tenantCollection,
   tenantDoc
@@ -102,6 +104,7 @@ export default function AdminBooks() {
   const [isbnInput,    setIsbnInput]    = useState('')
   const [looking,      setLooking]      = useState(false)
   const [lookupError,  setLookupError]  = useState(null)
+  const [scannerOpen,  setScannerOpen]  = useState(false)
 
   // Form state (open for add OR edit).
   const [form,        setForm]        = useState(null)   // null = no form open
@@ -140,17 +143,16 @@ export default function AdminBooks() {
     [books]
   )
 
-  // ── Lookup ──
-  const handleLookup = async (event) => {
-    if (event && event.preventDefault) event.preventDefault()
+  // ── Lookup (called from form submit AND from scanner-success) ──
+  const performLookup = async (rawIsbn) => {
     setLookupError(null)
     setSaveError(null)
 
-    if (!isValidIsbn(isbnInput)) {
+    if (!isValidIsbn(rawIsbn)) {
       setLookupError('That doesn\'t look like a valid ISBN (10 or 13 digits, hyphens are fine).')
       return
     }
-    const isbn13 = normalizeIsbn(isbnInput)
+    const isbn13 = normalizeIsbn(rawIsbn)
 
     if (existingIsbns.has(isbn13)) {
       const existing = books.find((b) => b.isbn13 === isbn13)
@@ -178,6 +180,19 @@ export default function AdminBooks() {
     } finally {
       setLooking(false)
     }
+  }
+
+  const handleLookup = (event) => {
+    if (event && event.preventDefault) event.preventDefault()
+    return performLookup(isbnInput)
+  }
+
+  const handleScanResult = (isbn13) => {
+    setScannerOpen(false)
+    setIsbnInput(isbn13)
+    // Auto-trigger the lookup so a successful scan flows straight into
+    // the review pane — that's the whole point of scanning.
+    performLookup(isbn13)
   }
 
   // ── Edit existing ──
@@ -346,11 +361,29 @@ export default function AdminBooks() {
             >
               {looking ? 'Looking up…' : 'Look up book'}
             </button>
+            <button
+              type      ="button"
+              onClick   ={() => setScannerOpen(true)}
+              className ={`btn btn-secondary ${bookStyles.scanBtn}`}
+              disabled  ={looking}
+              title     ="Use the camera to scan the barcode on the back of a book"
+            >
+              <span aria-hidden="true" className={bookStyles.scanGlyph}>⎙</span>
+              <span>Scan barcode</span>
+            </button>
           </form>
           {lookupError ? (
             <div className={styles.error} role="alert">{lookupError}</div>
           ) : null}
         </section>
+      ) : null}
+
+      {/* ── SCANNER OVERLAY ── */}
+      {scannerOpen ? (
+        <IsbnScanner
+          onScan ={handleScanResult}
+          onClose={() => setScannerOpen(false)}
+        />
       ) : null}
 
       {/* ── REVIEW / EDIT FORM ── */}

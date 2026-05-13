@@ -193,6 +193,15 @@ const siteContent = {
       a: 'No. The prize pool is community-funded — sponsors donate prizes physically at the library, and the platform tracks them. If more kids complete challenges than there are prizes, the pool can run dry. We surface the live prize-pool count on the home page so kids and parents see the current state. Reading is the win; the prize is a bonus. Kids who complete a challenge after the pool is empty receive a "Library Loot Champion" certificate signed by the librarian.'
     },
     {
+      q: 'What stops older kids from picking easy books for prizes?',
+      a: [
+        'Three things, layered:',
+        '— Each book has an age range. Books with broad appeal (think Harry Potter) are labeled "ages 8 and up" — older kids welcome. Books strictly targeted at younger readers (like picture books) have an upper age too, so a high schooler picking it triggers a warning at challenge acceptance.',
+        '— The library can configure how strict the warning is: a soft "are you sure?" the kid can accept and keep going, OR a hard block. The librarian sets the policy.',
+        '— The librarian reviews every completion before any prize draw fires. Even if a kid bypasses the age warning, the librarian sees the bypass at approval and can decline. Reading levels are anchored to what the librarian observes about the kid in person, not what their birth year says.'
+      ]
+    },
+    {
       q: 'How do you prevent cheating?',
       a: [
         'Several layers, working together:',

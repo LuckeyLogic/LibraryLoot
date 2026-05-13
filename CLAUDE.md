@@ -484,11 +484,21 @@ Broken into shippable sub-items so each is a clean PR.
 - `firestore.rules` — added `/{tenantId}/_main/books/{bookId}` block: public read (the catalog is publicly browseable on /books when ITEM 3c lands; the home page also reads it), admin write. Deployed to `library-loot`.
 - `AdminLayout` sidebar — added "Books" nav entry between Settings and Avatars.
 
-#### [ ] ITEM 3b — Camera-based ISBN barcode scanner
+#### [✅] ITEM 3b — Camera-based ISBN barcode scanner
 
-- Add `@zxing/browser` dependency
-- New `src/components/IsbnScanner.jsx` — camera UI that auto-fills the ISBN field on `/admin/books`
-- Permissions UX (camera prompt), fallback to manual entry if denied
+- Added `@zxing/browser` dependency (^0.2.0).
+- New `src/components/IsbnScanner.jsx` — full-screen camera overlay. Uses `BrowserMultiFormatReader.decodeFromConstraints` with `facingMode: { ideal: 'environment' }` so phones pick the rear camera. Validates every read against `utils/isbn` and silently keeps scanning if the barcode isn't a valid ISBN (e.g., a UPC on the cellophane wrapper). On match: fires `onScan(isbn13)` with the canonical ISBN-13.
+- Permissions UX — first open prompts the browser; denied / no-camera / error states each show a tailored help block with a "Type it instead" button that falls back to the manual ISBN input.
+- Close on the × button, on backdrop click, or on Escape. Camera stream stopped on unmount via the controls returned by zxing.
+- Targeting reticle overlaid on the video with four gold corner brackets.
+- Wired into `/admin/books`: new **Scan barcode** button next to the ISBN input. On scan success: closes the scanner, fills the input, and auto-fires the lookup — one tap from scan to review pane.
+
+#### Reading-level + age policy (cross-cutting; ITEM 5 wires enforcement)
+
+- Decided in this commit: books carry both a coarse `readingLevel` bucket and fine-grained `minAge` / `maxAge` fields. `maxAge` is **optional** — leave null for books with broad appeal ("Harry Potter, ages 8 and up"); set it for books with a hard upper bound (picture books targeted at 3-6).
+- Tenant setting `_main.verification.readingLevelEnforcement` picks the behavior at challenge acceptance: `'off'` / `'warn'` (default) / `'block'`. See SPEC.md §3.1.1.
+- Enforcement happens at challenge acceptance (ITEM 5). Today this commit only updates the doc shape spec, the FAQ entry, the For Parents copy, and the ITEM 5 plan below.
+- AdminBooks form still uses `readingLevel` only; the `minAge` / `maxAge` editor lands in a future tweak — non-blocking since ITEM 5 enforcement is what consumes them.
 
 #### [ ] ITEM 3c — Public book browse + per-book detail page
 
@@ -509,6 +519,7 @@ Broken into shippable sub-items so each is a clean PR.
 ### [ ] ITEM 5 — Challenge Lifecycle + Quiz Verification
 
 - `/{tenant}/_main/challenges/{challengeId}` — state machine: open → accepted → submitted → approved → rewarded
+- **Reading-level enforcement at challenge acceptance** — see SPEC.md §3.1.1. Read `_main.verification.readingLevelEnforcement` (off / warn / block). Compute kid's age from `birthYear`; if `null`, skip enforcement. Compare against the book's `[minAge, maxAge]` (treat `maxAge: null` as no upper bound). On out-of-range with mode `'warn'`: show a soft-warning card BEFORE the HonestyPledge and record `acceptedDespiteAgeWarning: true` on the challenge doc. On `'block'`: refuse acceptance with a "pick a book in your range" message.
 - **Reader's promise (honor-system pledge) at challenge acceptance** — `src/components/HonestyPledge.jsx` already exists (built during ITEM 2j). Wire it into the challenge-acceptance UI so the kid (or parent) takes the four pledge statements + single checkbox + accept button BEFORE the challenge doc is created. Snapshot the pledge text + version into the challenge doc so a librarian reviewing a completion months later sees the EXACT promise that was taken (see SPEC.md §5 Reader's promise).
 - Quiz authoring flow: AI-assisted (Firebase AI Logic + Gemini 2.0 Flash) → librarian approval → publish
 - Quiz pool of 15-20 questions per book; quiz samples 8 randomly per attempt

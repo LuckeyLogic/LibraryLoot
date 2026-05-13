@@ -97,7 +97,8 @@ Each library (or community org) is a **tenant** with its own isolated data root.
     quizMinScore        : 0.7,           // 70% of 8 sampled questions
     quizTimeLimitMin    : 10,
     oralCheckoffEnabled : true,
-    parentSignoffEnabled: true
+    parentSignoffEnabled: true,
+    readingLevelEnforcement: 'warn'      // 'off' | 'warn' | 'block' — see §3.1.1
   },
   entropy: {
     providers : ['drand', 'random_org', 'crypto_random'],
@@ -124,20 +125,50 @@ Each library (or community org) is a **tenant** with its own isolated data root.
 
 ```js
 {
-  id            : string,            // Firestore doc ID
+  id            : string,            // Firestore doc ID = canonical ISBN-13
   isbn13        : string,
   title         : string,
   authors       : string[],
-  coverPath     : string,            // Storage path (cached from API)
+  coverUrl      : string | null,     // External URL (Open Library / Google Books).
+                                     //   v1 references directly; future versions may
+                                     //   cache to Storage at /{tenant}/books/{id}/cover.{ext}
   publishedYear : number | null,
-  readingLevel  : string | null,     // 'EarlyReader' | 'Grade3-5' | 'MiddleGrade' | 'YA'
-  summary       : string,            // from API, used by quiz generator
+  readingLevel  : 'EarlyReader' | 'Grade3-5' | 'MiddleGrade' | 'YA' | null,
+                                     //   Coarse-grained bucket for at-a-glance filtering.
+  minAge        : number | null,     //   Fine-grained minimum age. e.g. 8 → "ages 8 and up".
+  maxAge        : number | null,     //   Optional upper bound. null = "no upper bound";
+                                     //   the book is fine for any kid above minAge.
+                                     //   Set both for a strict range (e.g. picture books
+                                     //   minAge 3, maxAge 6); leave maxAge null for
+                                     //   books with broad appeal (Harry Potter →
+                                     //   minAge 8, maxAge null).
+  summary       : string,            // From API, used by quiz generator + book detail page
+  source        : 'open-library' | 'google-books' | 'manual',
   addedBy       : string,            // uid
   addedAt       : Timestamp,
+  updatedAt     : Timestamp | null,
   active        : boolean,
-  quizApproved  : boolean            // true once librarian has approved the quiz pool
+  quizApproved  : boolean            // True once librarian has approved the quiz pool
 }
 ```
+
+#### 3.1.1 Reading-level enforcement at challenge acceptance
+
+The age-range fields exist to prevent the "high schooler reads Hungry Hungry Caterpillar for V-Bucks" case without over-restricting kids whose age doesn't match their actual reading level. Per-tenant setting `_main.verification.readingLevelEnforcement`:
+
+| Mode | Behavior when kid's age is outside the book's `[minAge, maxAge]` range |
+|---|---|
+| `'off'` | Pure honor system. No warning, no block. Librarian-approval gate at the end is the sole defense. |
+| `'warn'` *(recommended default)* | Soft warning shown above the HonestyPledge: "This book is usually for ages X-Y. Are you sure?" Kid can still accept. The challenge doc records `acceptedDespiteAgeWarning: true` so the librarian sees the flag at approval. |
+| `'block'` | Hard block. Kid can't accept. UI suggests picking a book in their range. |
+
+When kid's `birthYear` is null (parent declined to provide), enforcement falls back to `'off'` regardless of mode — the platform doesn't guess.
+
+When a book's `maxAge` is null, no upper bound is enforced. Only `kidAge < minAge` triggers anything. This is the "Harry Potter is for everyone 8 and up" case — older kids welcome.
+
+When a book has BOTH `minAge` AND `maxAge` (like a strictly-targeted picture book), the range is inclusive on both ends. A kid outside the range triggers the warning/block.
+
+The librarian-approval gate at the END of a quiz remains the **real** anti-cheat regardless of mode — the reading-level fields just give the librarian a flag + audit trail.
 
 ### 3.2 Quiz question (subcollection of Book)
 
