@@ -1,0 +1,142 @@
+/*  src/pages/Account.module.css
+ */
+
+.wrap {
+  padding  : var(--space-2xl) var(--space-lg);
+  max-width: 1000px;
+}
+
+.header {
+  margin-bottom: var(--space-xl);
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.9rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--electric-blue);
+  margin         : 0 0 var(--space-sm);
+}
+
+.title {
+  font-family : var(--font-display);
+  font-size   : clamp(1.75rem, 4vw, 2.5rem);
+  background  : linear-gradient(120deg, var(--loot-gold-bright), var(--neon-purple), var(--electric-blue));
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+  margin                 : 0 0 var(--space-md);
+}
+
+.lede {
+  color    : var(--hud-muted);
+  font-size: 1rem;
+  margin   : 0;
+  max-width: 65ch;
+}
+
+.lede a {
+  color      : var(--electric-blue);
+  font-weight: 600;
+}
+
+/* ── ADD ROW ── */
+.addRow {
+  display    : flex;
+  flex-wrap  : wrap;
+  align-items: center;
+  gap        : var(--space-md);
+  margin     : var(--space-xl) 0;
+}
+
+.addHelp {
+  color    : var(--hud-muted);
+  font-size: var(--fs-small);
+}
+
+.addHelp a {
+  color      : var(--electric-blue);
+  font-weight: 600;
+}
+
+.formWrap {
+  margin: var(--space-xl) 0;
+}
+
+/* ── SECTION HEADER ── */
+.sectionTitle {
+  display      : flex;
+  align-items  : baseline;
+  gap          : var(--space-md);
+  font-family  : var(--font-display);
+  font-size    : 1.25rem;
+  color        : var(--hud-white);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid rgba(157, 78, 221, 0.3);
+}
+
+.count {
+  font-family   : var(--font-body);
+  font-size     : 0.85rem;
+  font-weight   : 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color         : var(--hud-muted);
+}
+
+/* ── GRID ── */
+.grid {
+  display              : grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap                  : var(--space-lg);
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap                  : var(--space-md);
+  }
+}
+
+.empty {
+  margin    : var(--space-lg) 0;
+  padding   : var(--space-xl);
+  color     : var(--hud-muted);
+  text-align: center;
+  border    : 1px dashed rgba(183, 175, 216, 0.3);
+  border-radius: var(--radius-md);
+}
+
+.error {
+  margin       : var(--space-md) 0;
+  padding      : 0.7rem 0.85rem;
+  background   : rgba(255, 0, 110, 0.12);
+  border       : 1px solid var(--magenta-pop);
+  color        : var(--hud-white);
+  border-radius: var(--radius-sm);
+  font-size    : var(--fs-small);
+}
+
+/* ── NEXT STEP CALLOUT ── */
+.nextStep {
+  margin-top   : var(--space-2xl);
+  padding      : var(--space-lg) var(--space-xl);
+  background   : rgba(76, 201, 240, 0.06);
+  border       : var(--border-rare);
+  border-radius: var(--radius-lg);
+}
+
+.nextStep h2 {
+  font-family : var(--font-display);
+  font-size   : 1.2rem;
+  color       : var(--electric-blue);
+  margin      : 0 0 var(--space-sm);
+}
+
+.nextStep p {
+  margin    : 0;
+  color     : var(--hud-white);
+  line-height: 1.55;
+}

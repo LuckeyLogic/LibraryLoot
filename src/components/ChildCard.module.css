@@ -1,0 +1,138 @@
+/*  src/components/ChildCard.module.css
+ */
+
+.card {
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-sm);
+  padding       : var(--space-md);
+  background    : rgba(26, 20, 56, 0.6);
+  border        : 1px solid rgba(157, 78, 221, 0.35);
+  border-radius : var(--radius-md);
+  transition    : border-color 0.18s ease, transform 0.18s ease;
+}
+
+@media (hover: hover) {
+  .card:hover {
+    transform   : translateY(-2px);
+    border-color: var(--electric-blue);
+  }
+}
+
+.surface {
+  position     : relative;
+  aspect-ratio : 1 / 1;
+  width        : 100%;
+  border-radius: var(--radius-md);
+  overflow     : hidden;
+  border       : var(--border-epic);
+  background   :
+    radial-gradient(circle at 30% 25%, rgba(157, 78, 221, 0.55), transparent 60%),
+    radial-gradient(circle at 75% 75%, rgba(76, 201, 240, 0.45), transparent 60%),
+    linear-gradient(140deg, var(--night-soft), var(--night-mid));
+  display      : flex;
+  align-items    : center;
+  justify-content: center;
+}
+
+.avatarImg {
+  position: absolute;
+  inset   : 8%;
+  width   : 84%;
+  height  : 84%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.avatarFallback {
+  font-family: var(--font-display);
+  font-size  : 3rem;
+  color      : var(--loot-gold-bright);
+  text-shadow: 0 0 12px rgba(255, 209, 102, 0.55);
+}
+
+.body {
+  display       : flex;
+  flex-direction: column;
+  gap           : 0.2rem;
+  text-align    : center;
+}
+
+.name {
+  font-family : var(--font-display);
+  font-size   : 1.2rem;
+  color       : var(--hud-white);
+  margin      : 0;
+  overflow    : hidden;
+  text-overflow: ellipsis;
+  white-space : nowrap;
+}
+
+.age {
+  margin    : 0;
+  color     : var(--hud-muted);
+  font-size : var(--fs-small);
+}
+
+.badge {
+  display     : inline-flex;
+  align-items : center;
+  gap         : 0.35rem;
+  margin      : var(--space-xs) auto 0;
+  padding     : 0.25rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size   : 0.75rem;
+  font-family : var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badgeVerified {
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.85), rgba(255, 182, 39, 0.85));
+  color     : var(--night);
+}
+
+.badgePending {
+  background: rgba(183, 175, 216, 0.18);
+  color     : var(--hud-muted);
+  border    : 1px solid rgba(183, 175, 216, 0.3);
+}
+
+.actions {
+  display    : flex;
+  gap        : var(--space-xs);
+  margin-top : var(--space-xs);
+}
+
+.edit, .delete {
+  flex          : 1 1 0;
+  font-family   : var(--font-display);
+  font-size     : 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding       : 0.35rem 0.5rem;
+  border-radius : var(--radius-sm);
+  background    : transparent;
+  color         : var(--hud-muted);
+  border        : 1px solid rgba(183, 175, 216, 0.3);
+  cursor        : pointer;
+  touch-action  : manipulation;
+  transition    : color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: rgba(76, 201, 240, 0.25);
+}
+
+@media (hover: hover) {
+  .edit:hover {
+    color       : var(--electric-blue);
+    border-color: var(--electric-blue);
+    background  : rgba(76, 201, 240, 0.08);
+  }
+  .delete:hover {
+    color       : var(--magenta-pop);
+    border-color: var(--magenta-pop);
+    background  : rgba(255, 0, 110, 0.08);
+  }
+}
+
+.edit:active   { color: var(--electric-blue); border-color: var(--electric-blue); }
+.delete:active { color: var(--magenta-pop);   border-color: var(--magenta-pop); }

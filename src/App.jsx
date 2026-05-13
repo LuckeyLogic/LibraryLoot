@@ -26,6 +26,7 @@ import AdminSettings          from './pages/admin/AdminSettings.jsx'
 import AdminAvatars           from './pages/admin/AdminAvatars.jsx'
 import FAQ                    from './pages/FAQ.jsx'
 import ForParents             from './pages/ForParents.jsx'
+import Account                from './pages/Account.jsx'
 import Terms                  from './pages/Terms.jsx'
 import Privacy                from './pages/Privacy.jsx'
 import NotFound               from './pages/NotFound.jsx'
@@ -56,6 +57,14 @@ export default function App() {
             element={
               <PrivateRoute>
                 <AdminSetup />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path   ="/account"
+            element={
+              <PrivateRoute>
+                <Account />
               </PrivateRoute>
             }
           />

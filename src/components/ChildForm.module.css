@@ -1,0 +1,137 @@
+/*  src/components/ChildForm.module.css
+ */
+
+.form {
+  padding      : var(--space-xl);
+  border       : var(--border-rare);
+  border-radius: var(--radius-lg);
+  background   : rgba(13, 10, 31, 0.75);
+  box-shadow   : 0 0 24px rgba(76, 201, 240, 0.18);
+}
+
+.header {
+  margin-bottom: var(--space-lg);
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.8rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--electric-blue);
+  margin         : 0 0 var(--space-xs);
+}
+
+.title {
+  font-family : var(--font-display);
+  font-size   : 1.5rem;
+  color       : var(--hud-white);
+  margin      : 0 0 var(--space-sm);
+}
+
+.help {
+  color    : var(--hud-muted);
+  font-size: var(--fs-small);
+  margin   : 0;
+  max-width: 60ch;
+}
+
+.fields {
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-lg);
+  margin-bottom : var(--space-lg);
+}
+
+.field {
+  display       : flex;
+  flex-direction: column;
+  gap           : 0.4rem;
+}
+
+.label {
+  font-family   : var(--font-display);
+  font-size     : 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color         : var(--hud-muted);
+}
+
+.optional {
+  font-weight   : 400;
+  font-family   : var(--font-body);
+  text-transform: none;
+  letter-spacing: 0;
+  color         : var(--hud-muted);
+  font-size     : 0.85em;
+}
+
+.input {
+  width        : 100%;
+  padding      : 0.7rem 0.9rem;
+  background   : rgba(13, 10, 31, 0.7);
+  color        : var(--hud-white);
+  border       : 1px solid rgba(183, 175, 216, 0.3);
+  border-radius: var(--radius-sm);
+  font-family  : var(--font-body);
+  font-size    : 1rem;
+  transition   : border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus {
+  outline    : none;
+  border-color: var(--electric-blue);
+  box-shadow : 0 0 0 3px rgba(76, 201, 240, 0.18);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+select.input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--hud-muted) 50%),
+                    linear-gradient(135deg, var(--hud-muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+  background-size    : 5px 5px;
+  background-repeat  : no-repeat;
+  padding-right      : 2rem;
+}
+
+.actions {
+  display    : flex;
+  gap        : var(--space-md);
+  align-items: center;
+  flex-wrap  : wrap;
+}
+
+.cancel {
+  font-family   : var(--font-display);
+  font-size     : 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color         : var(--hud-muted);
+  background    : transparent;
+  border        : 1px solid rgba(183, 175, 216, 0.3);
+  border-radius : var(--radius-md);
+  padding       : 0.65rem 1.1rem;
+  cursor        : pointer;
+  touch-action  : manipulation;
+}
+
+@media (hover: hover) {
+  .cancel:hover {
+    color       : var(--hud-white);
+    border-color: var(--hud-muted);
+  }
+}
+
+.error {
+  margin-bottom: var(--space-md);
+  padding      : 0.7rem 0.85rem;
+  background   : rgba(255, 0, 110, 0.12);
+  border       : 1px solid var(--magenta-pop);
+  color        : var(--hud-white);
+  border-radius: var(--radius-sm);
+  font-size    : var(--fs-small);
+}

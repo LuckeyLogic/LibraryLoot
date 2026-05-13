@@ -102,6 +102,15 @@ export default function Navbar() {
 
           {user ? (
             <>
+              <NavLink
+                to        ="/account"
+                onClick   ={closeMenu}
+                className ={({ isActive }) =>
+                  `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`
+                }
+              >
+                My account
+              </NavLink>
               {isAdmin ? (
                 <NavLink
                   to        ="/admin"

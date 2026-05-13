@@ -395,12 +395,16 @@ Broken into shippable sub-items so each is a clean PR.
 - New `firestore.rules` — per-tenant boundaries via `request.auth.token.tenant`. Helpers: `inTenant(tenantId)`, `isTenantAdmin(tenantId)`, `isSelf(uid)`. Coverage: `_setup_tokens` server-only; `_main` tenant-read/admin-write; users read by self or admin / write deny (server-only); children CRUD by parent or admin. Future collections (books, prizes, sponsors, challenges, redemptions, sponsorInquiries) get rules added per item.
 - New `storage.rules` — public read on `/{tenant}/assets/**`, `/{tenant}/sponsors/{sponsorId}/**`, `/{tenant}/books/{bookId}/**`; admin-write on all of those; deny by default elsewhere.
 
-#### [ ] ITEM 2d — Parent Dashboard + Child Sub-Profiles
+#### [✅] ITEM 2d — Parent Dashboard + Child Sub-Profiles
 
-- `/account` parent page
-- Create / edit / delete child sub-profile UI (first name only, optional birth year, `verified: false` default — see anti-cheat note in SPEC.md)
-- Stock-avatar picker (avatars uploaded via the admin avatar manager in 2e). Child doc references `avatarId`. No photo upload, no AI generation — see project_library_loot.md memory + Privacy Policy stance.
-- Writes to `/{tenant}/_main/users/{uid}/children/{childId}` (rules in place from 2c)
+- New `/account` page (`src/pages/Account.jsx`, PrivateRoute-wrapped). Live `onSnapshot` subscription to `/{tenantId}/_main/users/{uid}/children`. Header greets the parent by first name (derived via the same precedence rule as Navbar). Card grid below for existing kids.
+- New `ChildCard` component (`src/components/ChildCard.jsx`) — avatar on the Fortnite-vibe gradient surface (matches the admin avatar manager and picker), first name in display font, optional age hint from birth year, **"Pending librarian verification"** badge by default OR gold **"Verified by librarian"** badge when `verified === true`. Edit / Delete actions.
+- New `ChildForm` component (`src/components/ChildForm.jsx`) — controlled form for add OR edit. First name (required, max 40 chars), birth year (optional select from year range that covers ~4y-old preschoolers up to 18y-old HS seniors; "I'd rather not say" is the default), and avatar picker. Validates client-side; surfaces save errors inline.
+- New `AvatarPicker` component (`src/components/AvatarPicker.jsx`) — live grid of the tenant's avatar pack from `/{tenantId}/_main/avatars`. Radio-group semantics, keyboard-accessible. Selected tile gets a gold border + corner check. Empty-state message points the parent at the librarian if the pack hasn't been populated yet.
+- Child doc shape: `{ id, firstName, birthYear, avatarId, verified: false, verifiedBy, verifiedAt, createdAt, updatedAt }`. UUID-without-dashes IDs. Writes via `setDoc` (create) and `updateDoc` (edit).
+- Delete confirmation prompt before removing a child doc. Server-side cascade of challenges/quiz attempts comes with ITEM 5; for now, just the child doc is removed.
+- Navbar — "My account" link added in the auth slot, visible whenever a user is signed in (parent or admin). Admin still gets the Admin link in addition.
+- "Next: verified at the library" callout appears below the grid once a parent has at least one kid, prepping them for the in-person step that gates the prize draw (ITEM 6).
 
 #### ITEM 2e — Admin Dashboard (sliced)
 

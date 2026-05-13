@@ -28,11 +28,13 @@ Adults (parents, grandparents, neighbors, local businesses) sponsor a specific b
 | ✅ | ITEM 2a — Auth (Google + Email/Password) + AuthContext + login/signup |
 | ✅ | ITEM 2b — First-admin setup-token flow + Cloud Functions |
 | ✅ | ITEM 2c — Real per-tenant Firestore + Storage rules + tenant-claim bootstrap |
+| ✅ | ITEM 2d — Parent dashboard + child sub-profiles + avatar picker |
 | ✅ | ITEM 2e.1 — Admin shell + Settings panel + tenant-live About / Privacy / Terms |
+| ✅ | ITEM 2e.2 — Admin avatar manager + image optimizer + lightbox |
 | ✅ | ITEM 2g — Themed JSDoc developer-docs site |
 | ✅ | ITEM 2h — Docs auto-build + deploy at `/docs/` |
-| 🚧 | ITEM 2e.2 — Admin avatar manager + image optimizer |
-| ⏳ | ITEM 2d — Parent dashboard + child sub-profiles (with anti-cheat verified flag) |
+| ✅ | ITEM 2i — Cease-and-desist contingency plan + public FAQ |
+| ✅ | ITEM 2j — Parents & Guardians guide at `/for-parents` |
 | ⏳ | ITEM 3 — Book management (ISBN scan + Open Library API) |
 | ⏳ | ITEM 4 — Prize management + sponsor branding + Sponsor intake form |
 | ⏳ | ITEM 5 — Challenge lifecycle + AI-assisted quiz authoring |
