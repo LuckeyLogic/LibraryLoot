@@ -311,13 +311,14 @@ jsdoc.config.json
 6. **Update this file after each item** — ✅ mark, session notes, tech stack versions.
 7. **Public repo discipline** — never commit secrets, service accounts, real user data, or unapproved third-party IP imagery.
 8. **CSS Modules only** for component styles. CSS variables for every color / font / radius. Never hardcode.
-9. **JSDoc always** — every component, function, model, utility gets JSDoc.
-10. **`npm run build` after major changes** to confirm no errors.
-11. **Commit after each approved item** — atomic commits, descriptive messages.
-12. **Don't push** until Miguel confirms it works in the browser.
-13. **Compliance** — flag any feature touching child data. COPPA stance lives in SPEC.md; Privacy Policy must stay current.
-14. **Luckey Logic credit** — present in the footer of all pages, never removed without explicit instruction.
-15. **Epic Games disclaimer** — present in the footer and in any V-Bucks marketing copy. Source string in `siteContent.legal.epicGamesDisclaimer`.
+9. **JSDoc always** — every component, function, model, utility gets JSDoc. **Update the JSDoc and any references in `jsdoc-readme.md` in the SAME commit as the behavior change.** Docs drift quietly otherwise — the build trail (SHA + date in the docs footer) helps catch it, but the cheapest fix is not letting it happen.
+10. **Periodic docs review** — when wrapping up an ITEM that materially changed how something works (new collection, renamed function, removed flow), explicitly read `jsdoc-readme.md` plus the JSDoc on every file in that area and confirm it still describes the current behavior. Treat stale prose as a bug.
+11. **`npm run build` after major changes** to confirm no errors.
+12. **Commit after each approved item** — atomic commits, descriptive messages.
+13. **Don't push** until Miguel confirms it works in the browser.
+14. **Compliance** — flag any feature touching child data. COPPA stance lives in SPEC.md; Privacy Policy must stay current.
+15. **Luckey Logic credit** — present in the footer of all pages, never removed without explicit instruction.
+16. **Epic Games disclaimer** — present in the footer and in any V-Bucks marketing copy. Source string in `siteContent.legal.epicGamesDisclaimer`.
 
 ---
 
@@ -406,6 +407,14 @@ Broken into shippable sub-items so each is a clean PR.
 - `/admin/settings` editor for the `_main.support` block (organization name, program contact, COPPA contact, privacy contact) — About / Privacy / Terms switch to reading live tenant values instead of `siteContent.support` defaults
 - `/admin/avatars` CRUD for the default avatar pack — upload to `/{tenant}/avatars/{id}.{ext}` (Resize Images extension generates thumbnails); list / delete; metadata stored at `/{tenant}/_main/avatars/{avatarId}` for the picker in 2d to read
 
+#### [✅] ITEM 2h — Docs Auto-Build + Deploy at `/docs`
+
+- New `npm run build:all` runs `vite build` → `npm run docs` → `cp -r docs dist/docs`. Single command produces the full deploy artifact (React app + JSDoc docs site under `/docs/`). Both GitHub Actions workflows (`firebase-hosting-merge.yml` and `firebase-hosting-pull-request.yml`) call `build:all` so every push rebuilds and ships current docs.
+- New `scripts/write-docs-build-info.js` runs as part of `npm run docs`. Captures the current git SHA, branch, and ISO timestamp into `jsdoc-template/static/scripts/ll-build-info.js` (gitignored — regenerated every build) as a `window.LL_BUILD` global.
+- `ll-enhance.js` updated to consume `window.LL_BUILD`: replaces the footer build stamp with `Build YYYY-MM-DD HH:MM UTC · <sha> (branch)` where `<sha>` is a link to the exact GitHub commit. Also appends a "Source on GitHub" footer link. Falls back to a `<noscript>` GitHub link for JS-disabled visitors.
+- Firebase Hosting serves `/docs/*` as real files; the existing SPA rewrite (`** → /index.html`) only fires for unmatched paths, so the docs site and React app coexist cleanly under one hosting target.
+- Production verified: `library-loot.web.app/docs/` shows the current commit's docs after every merge.
+
 #### [✅] ITEM 2g — Themed JSDoc Developer-Docs Site
 
 - Adapted from the mcl-central template: copied `publish.js` + `tmpl/*` + the prettify-jsdoc/prettify-tomorrow stylesheets; bulk-renamed `mcl-` CSS / ID prefixes to `ll-`; replaced MCL branding strings in `layout.tmpl` with Library Loot equivalents; renamed `mcl-enhance.js` → `ll-enhance.js`.
@@ -454,6 +463,14 @@ Broken into shippable sub-items so each is a clean PR.
 - Browse active challenges page
 - Per-book public landing page with reward summary
 - Printable display-table card generator (one QR code per active book) for the physical library display
+
+### [ ] FUTURE — Runtime Theme from Firestore (v2 multi-tenant theming)
+
+When more than one tenant runs on the platform and they want different brand palettes without a code change, lift `src/styles/tokens.css` into Firestore at `/{tenantId}/_main.theme`. A `useThemeTokens()` hook reads the doc on app boot, builds a `:root { ... }` `<style>` tag, and injects it into `<head>`. The docs site stays static-token (it documents the *code*, not per-tenant branding).
+
+Defer until a second real tenant asks. The current single-source-of-truth file already buys us 90% of the value with zero runtime cost.
+
+---
 
 ### [ ] ITEM 8 — Handoff Scripts
 
