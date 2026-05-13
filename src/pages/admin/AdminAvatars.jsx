@@ -4,16 +4,22 @@
 //
 // Pipeline on upload:
 //   1. User picks one or more image files.
-//   2. Each file is optimized client-side via utils/imageOptimize (resize
-//      to 512×512 max, re-encode as PNG to preserve transparency).
-//   3. The optimized Blob is uploaded to Firebase Storage at
-//      /{tenant}/avatars/{avatarId}.png.
-//   4. A metadata doc is written at /{tenant}/_main/avatars/{avatarId}
-//      with id, name, storagePath, downloadUrl, createdAt.
-//   5. Resize Images Firebase Extension fires automatically and produces
+//   2. Files land in a "staged" list where the admin names each one
+//      (default name derived from filename, editable inline).
+//   3. Admin clicks "Upload all". Each staged file:
+//        a. Optimized client-side via utils/imageOptimize (resize to
+//           512×512 max, re-encode as PNG to preserve transparency).
+//        b. Optimized Blob uploaded to /{tenant}/avatars/{avatarId}.png
+//           in Firebase Storage.
+//        c. Metadata doc written at /{tenant}/_main/avatars/{avatarId}
+//           with id, name, storagePath, downloadUrl, createdAt.
+//   4. Resize Images Firebase Extension fires automatically and produces
 //      thumbnails under /{tenant}/avatars/thumbs/ (we don't reference
 //      them yet; the parent-dashboard picker in ITEM 2d can use them
 //      later if grid performance matters).
+//
+// Names of existing avatars are inline-editable on the tile — click the
+// name → type → Enter / blur to save, Escape to cancel.
 //
 // Each avatar tile shows the transparent PNG on top of a Fortnite-vibe
 // gradient — Miguel's intent: source PNGs have no background, the
@@ -27,7 +33,8 @@ import {
   deleteDoc,
   onSnapshot,
   serverTimestamp,
-  setDoc
+  setDoc,
+  updateDoc
 }                                  from 'firebase/firestore'
 import {
   deleteObject,
@@ -52,6 +59,23 @@ import styles                      from './Admin.module.css'
 import avatarStyles                from './AdminAvatars.module.css'
 
 /**
+ * Derives a friendly default name from an uploaded filename. Strips the
+ * extension, replaces underscores / hyphens with spaces, and trims. Returns
+ * "Avatar" if nothing useful remains.
+ *
+ * @param   {string} filename
+ * @returns {string}
+ */
+function defaultNameFor(filename) {
+  return (
+    (filename || '')
+      .replace(/\.[a-z0-9]+$/i, '')
+      .replace(/[_-]+/g, ' ')
+      .trim() || 'Avatar'
+  )
+}
+
+/**
  * AdminAvatars — manage the tenant's default avatar pack.
  *
  * @returns {JSX.Element}
@@ -62,9 +86,17 @@ export default function AdminAvatars() {
   const [loading,   setLoading]   = useState(true)
   const [listError, setListError] = useState(null)
 
-  // Active uploads: { id, name, status, progress, error, sizeBefore, sizeAfter }
+  // Staged files: picked but not yet uploaded. The admin edits each name
+  // here before hitting "Upload all". { id, file, name }
+  const [staged, setStaged] = useState([])
+
+  // Active uploads: { id, name, status, error, sizeBefore, sizeAfter }
   const [uploads, setUploads] = useState([])
   const fileInputRef          = useRef(null)
+
+  // Inline-rename state for existing tiles in the grid.
+  const [editingId,   setEditingId]   = useState(null)
+  const [editingName, setEditingName] = useState('')
 
   // ── Live subscription to the avatars collection ──
   // Sort newest-first client-side to avoid needing a composite index for
@@ -93,7 +125,7 @@ export default function AdminAvatars() {
   }, [])
 
   // ── Upload a single file: optimize → Storage → Firestore ──
-  const uploadOne = useCallback(async (file, queueId) => {
+  const uploadOne = useCallback(async (file, queueId, displayName) => {
     const mark = (patch) =>
       setUploads((prev) =>
         prev.map((u) => (u.id === queueId ? { ...u, ...patch } : u))
@@ -123,16 +155,11 @@ export default function AdminAvatars() {
       })
       const downloadUrl = await getDownloadURL(objRef)
 
-      // Friendly default name from the filename.
-      const niceName =
-        file.name
-          .replace(/\.[a-z0-9]+$/i, '')
-          .replace(/[_-]+/g, ' ')
-          .trim() || 'Avatar'
+      const finalName = (displayName && displayName.trim()) || defaultNameFor(file.name)
 
       await setDoc(tenantDoc('avatars', avatarId), {
         id          : avatarId,
-        name        : niceName,
+        name        : finalName,
         storagePath : path,
         downloadUrl,
         createdAt   : serverTimestamp()
@@ -148,26 +175,76 @@ export default function AdminAvatars() {
     }
   }, [])
 
+  // Stage picked files in the review list; admin edits names before upload.
   const handleFiles = (event) => {
     const files = Array.from(event.target.files || [])
     if (files.length === 0) return
 
-    const newEntries = files.map((file) => ({
-      id        : `${Date.now()}_${file.name}_${Math.random().toString(36).slice(2, 8)}`,
-      name      : file.name,
+    const newStaged = files.map((file) => ({
+      id  : `${Date.now()}_${file.name}_${Math.random().toString(36).slice(2, 8)}`,
+      file,
+      name: defaultNameFor(file.name)
+    }))
+    setStaged((prev) => [...prev, ...newStaged])
+
+    // Reset the input so picking the same file again still re-fires onChange.
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const updateStagedName = (id, name) => {
+    setStaged((prev) => prev.map((s) => (s.id === id ? { ...s, name } : s)))
+  }
+
+  const removeStaged = (id) => {
+    setStaged((prev) => prev.filter((s) => s.id !== id))
+  }
+
+  const clearStaged = () => setStaged([])
+
+  const uploadAllStaged = () => {
+    if (staged.length === 0) return
+
+    // Snapshot into the upload queue and fire each upload in parallel.
+    const queue = staged.map((s) => ({
+      id        : s.id,
+      name      : s.name,
       status    : 'queued',
-      sizeBefore: file.size,
+      sizeBefore: s.file.size,
       sizeAfter : null,
       error     : null
     }))
-    setUploads((prev) => [...newEntries, ...prev])
+    setUploads((prev) => [...queue, ...prev])
+    staged.forEach((s) => uploadOne(s.file, s.id, s.name))
+    setStaged([])
+  }
 
-    // Fire-and-forget each upload. They run in parallel — Firebase Storage
-    // handles concurrency fine for small files.
-    newEntries.forEach((entry, idx) => uploadOne(files[idx], entry.id))
+  // ── Inline rename of existing avatars ──
+  const startRename = (avatar) => {
+    setEditingId(avatar.id)
+    setEditingName(avatar.name)
+  }
 
-    // Reset the input so picking the same files again re-fires onChange.
-    if (fileInputRef.current) fileInputRef.current.value = ''
+  const cancelRename = () => {
+    setEditingId(null)
+    setEditingName('')
+  }
+
+  const saveRename = async (avatar) => {
+    const next = editingName.trim()
+    if (!next || next === avatar.name) {
+      cancelRename()
+      return
+    }
+    try {
+      await updateDoc(tenantDoc('avatars', avatar.id), {
+        name      : next,
+        updatedAt : serverTimestamp()
+      })
+    } catch (e) {
+      window.alert(`Couldn’t rename: ${e.message || e}`)
+    } finally {
+      cancelRename()
+    }
   }
 
   const handleDelete = async (avatar) => {
@@ -210,8 +287,8 @@ export default function AdminAvatars() {
         <div className={avatarStyles.uploadInner}>
           <p className={avatarStyles.uploadHeading}>Upload avatars</p>
           <p className={avatarStyles.uploadHelp}>
-            PNG with transparent background. Multiple files OK — they upload
-            in parallel.
+            PNG with transparent background. Pick one or many — each file gets
+            a name field below before you commit to upload.
           </p>
           <input
             ref       ={fileInputRef}
@@ -227,6 +304,58 @@ export default function AdminAvatars() {
           </label>
         </div>
 
+        {/* Staged files — name each then upload all */}
+        {staged.length > 0 ? (
+          <div className={avatarStyles.stagedBlock}>
+            <p className={avatarStyles.stagedHeading}>
+              Ready to upload ({staged.length})
+            </p>
+            <ul className={avatarStyles.stagedList}>
+              {staged.map((s) => (
+                <li key={s.id} className={avatarStyles.stagedItem}>
+                  <span className={avatarStyles.stagedFile} title={s.file.name}>
+                    {s.file.name} · {formatBytes(s.file.size)}
+                  </span>
+                  <input
+                    type      ="text"
+                    value     ={s.name}
+                    onChange  ={(e) => updateStagedName(s.id, e.target.value)}
+                    className ={avatarStyles.stagedInput}
+                    placeholder="Display name"
+                    maxLength ={60}
+                    aria-label={`Name for ${s.file.name}`}
+                  />
+                  <button
+                    type      ="button"
+                    onClick   ={() => removeStaged(s.id)}
+                    className ={avatarStyles.stagedRemove}
+                    aria-label={`Remove ${s.file.name} from upload list`}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className={avatarStyles.stagedActions}>
+              <button
+                type      ="button"
+                onClick   ={uploadAllStaged}
+                className ="btn btn-primary"
+              >
+                Upload all ({staged.length})
+              </button>
+              <button
+                type      ="button"
+                onClick   ={clearStaged}
+                className ={avatarStyles.stagedClear}
+              >
+                Clear staged
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* In-flight upload queue */}
         {uploads.length > 0 ? (
           <ul className={avatarStyles.queue}>
             {uploads.map((u) => (
@@ -280,7 +409,34 @@ export default function AdminAvatars() {
                     loading  ="lazy"
                   />
                 </div>
-                <p className={avatarStyles.tileName} title={a.name}>{a.name}</p>
+
+                {editingId === a.id ? (
+                  <input
+                    autoFocus
+                    type      ="text"
+                    value     ={editingName}
+                    maxLength ={60}
+                    onChange  ={(e) => setEditingName(e.target.value)}
+                    onBlur    ={() => saveRename(a)}
+                    onKeyDown ={(e) => {
+                      if (e.key === 'Enter')  { e.preventDefault(); e.target.blur() }
+                      if (e.key === 'Escape') { cancelRename() }
+                    }}
+                    className ={avatarStyles.tileRenameInput}
+                    aria-label={`Rename ${a.name}`}
+                  />
+                ) : (
+                  <button
+                    type      ="button"
+                    className ={avatarStyles.tileNameBtn}
+                    onClick   ={() => startRename(a)}
+                    title     ="Click to rename"
+                  >
+                    {a.name}
+                    <span className={avatarStyles.tileNamePencil} aria-hidden="true">✏︎</span>
+                  </button>
+                )}
+
                 <button
                   type      ="button"
                   className ={avatarStyles.tileDelete}
