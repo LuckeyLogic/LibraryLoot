@@ -429,6 +429,13 @@ Broken into shippable sub-items so each is a clean PR.
 - Firestore Rules — added `/{tenantId}/_main/avatars/{avatarId}`: public read (so the picker can render the grid without auth), admin write. Deployed.
 - AdminLayout sidebar — Avatars link gates correctly on `isAdmin`.
 
+#### [✅] ITEM 2i — Cease-and-desist contingency plan + public FAQ
+
+- **SPEC.md §11 — Contingency plan: Fortnite branding withdrawal.** Operational playbook covering: trigger scenarios (Epic C&D, counsel advice, voluntary rebrand), the critical invariant that existing V-Bucks gift cards stay distributable (Fan Content Policy restricts BRANDING, not commercial gift-card distribution), operator action checklist with target paths to change, what does NOT change (name, palette, font, data model), communication template to parent accounts, multi-tenant coordination, audit-trail discipline. Renumbered the existing roadmap section to §12.
+- **Public FAQ page** at `/faq` driven by `siteContent.faq` (13 entries). Highlight question: "What happens if Epic asks Library Loot to stop using Fortnite branding?" — the user-friendly summary of SPEC.md §11. Other entries cover the prize-draw verifiability, anti-cheat layers, no-written-reports rationale, Roblox exclusion, COPPA data collection, deletion-then-anonymization audit policy, source code transparency, and the multi-tenant hosting model.
+- **`FAQ.jsx`** uses HTML `<details>` for collapse/expand, custom styling with the ⚡ bullet marker for nested lists. Inline `**bold**` convention rendered without a markdown dep. Tail block surfaces the live tenant `support` email so users get the right contact for THIS instance (not Luckey Logic's by default after handoff).
+- **Navbar + Footer** gained the FAQ link. About page gained a paragraph + link to the FAQ.
+
 #### [✅] ITEM 2h — Docs Auto-Build + Deploy at `/docs`
 
 - New `npm run build:all` runs `vite build` → `npm run docs` → `cp -r docs dist/docs`. Single command produces the full deploy artifact (React app + JSDoc docs site under `/docs/`). Both GitHub Actions workflows (`firebase-hosting-merge.yml` and `firebase-hosting-pull-request.yml`) call `build:all` so every push rebuilds and ships current docs.

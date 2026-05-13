@@ -133,7 +133,83 @@ const siteContent = {
     credit       : 'Built by Luckey Logic LLC.',
     sourceUrl    : 'https://github.com/LuckeyLogic/LibraryLoot',
     copyrightYear: 2026
-  }
+  },
+
+  // ── FAQ ──
+  // Public Q&A surfaced at /faq. Keep answers concrete and short. When
+  // the same answer needs to evolve (e.g., Epic Games policy change),
+  // update the answer in place — this file is the canonical source.
+  // Operational details for the Epic withdrawal scenario live in
+  // SPEC.md §11; the FAQ entry below is the user-friendly summary.
+  faq: [
+    {
+      q: 'What is Library Loot?',
+      a: 'A community-funded reading rewards program. Adults sponsor reading challenges on specific books. Kids accept challenges through their parent\'s account, read the books, prove they read them, and a verifiable random draw awards a prize from the donated prize pool. The platform never takes money — every prize comes from the community.'
+    },
+    {
+      q: 'Is Library Loot affiliated with Epic Games or Fortnite?',
+      a: 'No. Library Loot is not affiliated with, endorsed, or sponsored by Epic Games. Fortnite-related visual elements are used as Fan Content under Epic\'s Fan Content Policy. If Epic Games asks us to remove or change Fortnite branding, we comply immediately. See "What happens if Epic asks Library Loot to stop using Fortnite branding?" below for the detailed plan.'
+    },
+    {
+      q: 'What happens if Epic asks Library Loot to stop using Fortnite branding?',
+      a: [
+        'We pivot away from Fortnite branding within ~24 hours and continue running the program. Specifically:',
+        '— **Your child\'s current challenges are unaffected.** Whatever they\'re reading, they keep reading. Their quiz works. Their prize draw fires.',
+        '— **Already-won prizes are honored.** If a child has earned a prize, they get it.',
+        '— **Existing V-Bucks gift cards in the pool are still distributed.** Giving away a V-Bucks card you bought at retail is normal gift-card use — Epic\'s policy restricts how you market with Fortnite branding, not who can give the cards away. Already-donated cards stay in the pool until they\'re won.',
+        '— **The Fortnite-styled art and "V-Bucks" wording come down** from the site, and the program rebrands to a brand-agnostic reading-rewards program. The name "Library Loot" stays — it\'s a generic phrase, not Epic IP.',
+        '— **New prize categories open up:** Amazon books, Nintendo eShop, PlayStation, Xbox, local store gift cards, etc.',
+        'See SPEC.md §11 in the public repo for the full operational playbook.'
+      ]
+    },
+    {
+      q: 'How is the prize draw verified — can someone rig it?',
+      a: 'When a challenge is approved, a Cloud Function pulls a random value from drand (the League of Entropy public randomness beacon, signed by an international consortium of universities and labs), falling back to random.org if drand is unreachable, and to the server\'s OS-level random as a last resort. Every input — the entropy values, the prize pool snapshot at draw time, the timestamp, the algorithm version — is recorded in an append-only audit document. Anyone with the audit ID can re-run the math and verify. No human — librarian, sponsor, parent, or developer — can rig a draw.'
+    },
+    {
+      q: 'Are prizes guaranteed?',
+      a: 'No. The prize pool is community-funded — sponsors donate prizes physically at the library, and the platform tracks them. If more kids complete challenges than there are prizes, the pool can run dry. We surface the live prize-pool count on the home page so kids and parents see the current state. Reading is the win; the prize is a bonus. Kids who complete a challenge after the pool is empty receive a "Library Loot Champion" certificate signed by the librarian.'
+    },
+    {
+      q: 'How do you prevent cheating?',
+      a: [
+        'Several layers, working together:',
+        '— Children participate only through a parent\'s account. The parent is the COPPA consent agent.',
+        '— Each child profile must be verified in person by a librarian before any prize draw fires. Kids can read and quiz before verification; the prize gate is the librarian-handshake moment.',
+        '— Quiz questions test specific recall (minor character names, scene order, specific dialogue) — not summary-derivable facts. A pool of 15–20 questions per book is randomly sampled per attempt, so two kids see different quizzes on the same book. Quizzes are time-limited (~10 min) so Googling per question is friction.',
+        '— A librarian or parent must approve every challenge completion before the prize draw fires.',
+        '— One prize draw per book per child.'
+      ]
+    },
+    {
+      q: 'Why no written book reports?',
+      a: 'Because kids can feed any book to an AI and get a written summary in seconds. The platform exists to incentivize actual reading, not writing. Quiz mode and in-person check-off test recall of specifics they could only know by reading the book themselves.'
+    },
+    {
+      q: 'What about Roblox?',
+      a: 'Not supported. The platform operator excluded Roblox prizes — donations of Roblox cards or merchandise are declined.'
+    },
+    {
+      q: 'What information do you collect about my child?',
+      a: 'First name only. Optional birth year (year only — no full date of birth). A reference to which avatar they picked. That\'s it. No email, no phone, no last name, no photos, no address. Children never log in directly; their parent manages their participation. See the Privacy Policy for the full framework — base policy plus any supplement the operator of this site has added.'
+    },
+    {
+      q: 'What happens if I delete my child\'s profile?',
+      a: 'The child\'s profile and all associated activity are deleted. Prize-draw audit records are anonymized (your child\'s identifier is replaced with "deleted") but the random-draw audit trail itself is retained, because the platform\'s public verifiability depends on every past draw being re-checkable.'
+    },
+    {
+      q: 'Who operates this site, and who do I contact?',
+      a: 'See the About page or the contact email at the bottom of the Privacy Policy. Library Loot is a platform — each library or organization that hosts it is the operator of their instance and is the right contact for participation questions, COPPA requests, and sponsorship.'
+    },
+    {
+      q: 'Is the source code public?',
+      a: 'Yes — MIT-licensed at github.com/LuckeyLogic/LibraryLoot. Anyone can audit how the prize draw works, how child data is handled, and how the platform stays inside Epic\'s Fan Content Policy.'
+    },
+    {
+      q: 'Can my library run its own Library Loot instance?',
+      a: 'Yes. Contact Luckey Logic to either host on the shared Firebase project (free while the platform is small) or hand off the codebase and your tenant data to your own Firebase project. The handoff scripts in `/scripts` are designed to make this a clean operational transition with zero data sharing post-handoff.'
+    }
+  ]
 
 }
 

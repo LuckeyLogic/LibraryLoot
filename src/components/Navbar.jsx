@@ -18,7 +18,8 @@ import styles                 from './Navbar.module.css'
 const links = [
   { to: '/',        label: 'Home'    },
   { to: '/about',   label: 'About'   },
-  { to: '/donors',  label: 'Donors'  }
+  { to: '/donors',  label: 'Donors'  },
+  { to: '/faq',     label: 'FAQ'     }
 ]
 
 /**

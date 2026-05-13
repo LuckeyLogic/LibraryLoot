@@ -509,6 +509,90 @@ Anything else lives in Firestore.
 
 ---
 
-## 11. Roadmap pointers
+## 11. Contingency plan — Fortnite branding withdrawal
+
+Operational playbook for the scenario where Library Loot has to remove its Fortnite-themed branding. The public-facing FAQ at `/faq` summarizes this for users; this section is the operator's reference.
+
+### 11.1 Triggers
+
+Any of the following kicks off the plan:
+
+- Epic Games sends a cease-and-desist, DMCA notice, or otherwise revokes Fan Content Policy permission.
+- Counsel review (Luckey Logic's or a tenant's) advises a change.
+- A library that has taken operational ownership chooses to rebrand voluntarily.
+
+### 11.2 Critical invariant — existing prizes are safe
+
+**Giving away V-Bucks gift cards purchased commercially is independent of the Fan Content Policy.** The policy restricts BRANDING and PROMOTION using Epic IP; it does not restrict who can hand out gift cards purchased at retail. This is a meaningful distinction:
+
+- A library that bought a $10 V-Bucks card at Target can give that card to a kid as a prize, with or without Fan Content Policy permission. That's normal commercial gift-card distribution.
+- What the Fan Content Policy permits is the *creative work* surrounding it — Fortnite-styled art, marketing copy that says "Read for V-Bucks", etc. If Epic withdraws permission, that creative wrapper comes down; the cards themselves stay legal as prizes.
+
+Therefore, after a withdrawal:
+
+- Existing V-Bucks cards in the donated pool stay in the pool until they're won.
+- Already-completed redemptions are honored as drawn.
+- Already-accepted challenges complete normally — read, quiz, draw, prize.
+- The branding around the program changes, not the program's mechanics.
+
+### 11.3 Operator actions (target: complete within 24 hours)
+
+| What | Where | How |
+|---|---|---|
+| Swap hero asset | `siteContent.hero.imageUrl` | Upload new (original) art to Firebase Storage; replace URL string. One commit. |
+| Remove "Summer of Library Loot" logo's Fortnite-styled glyph | `siteContent.hero.logoUrl` | Same — new logo PNG to Storage; URL swap. |
+| Strip Fortnite / V-Bucks references from marketing copy | `siteContent.hero.*`, `howItWorks`, `prizeCategories`, `sponsorCTA` | Rewrite to brand-agnostic. Open prize categories to a wider set. |
+| Remove Epic Games disclaimer | `siteContent.legal.epicGamesDisclaimer` | Set to empty string. About, Privacy, Terms, Footer, FAQ all source from this — emptying it removes everywhere. |
+| Update FAQ entry on Fortnite affiliation | `siteContent.faq` | Rewrite to "we previously used Fortnite-styled art under Fan Content terms; we no longer do." |
+| Note the change in CLAUDE.md session notes | `CLAUDE.md` | Record date, reason, response. |
+| Email all parent accounts | Cloud Function or one-off mailer | 48-hour communication window. Template below. |
+
+### 11.4 What does NOT change
+
+- The platform's name (**Library Loot** — a generic phrase, not Epic IP).
+- The color palette (purple / blue / gold — not Epic-trademarked).
+- The display font (**Bungee** — public-domain-equivalent, not Burbank).
+- The data model, the prize-draw verification mechanism, the COPPA approach.
+- Open-source license and public repo.
+- Multi-tenant architecture and handoff scripts.
+
+### 11.5 Communication template (to all parent accounts)
+
+> Subject: Library Loot is dropping Fortnite branding — your child's progress is unaffected
+>
+> Hi,
+>
+> Library Loot is retiring the Fortnite-styled visuals and "V-Bucks" wording on our site. Why doesn't matter much for you — what matters is what happens to your child's participation, which is:
+>
+> - Whatever they're reading, they keep reading. Their quiz works. Their prize draw fires when they finish.
+> - If they've already won a prize, they still get it.
+> - V-Bucks gift cards already donated to the program will still be given out to the kids who earn them. Epic's policy is about how you BRAND a program, not who can give the cards away.
+> - Going forward, prize categories broaden — Amazon books, Nintendo eShop, PlayStation/Xbox, local store cards, etc.
+>
+> The program keeps running. Just looks different.
+>
+> If you have questions, reach the operator of this Library Loot instance at \<programContactEmail>. The full operational details are in our public repo at github.com/LuckeyLogic/LibraryLoot (SPEC.md §11).
+>
+> — \<operatorName>
+
+### 11.6 Tenant-coordination (multi-tenant edge cases)
+
+If the trigger comes during Luckey Logic's hosting of multiple tenants:
+
+- The codebase change is applied platform-wide automatically — single source, single deploy.
+- Tenant admins are notified the same day so they can communicate with their own users.
+
+If a tenant has migrated to their own Firebase project:
+
+- That tenant operates independently and is responsible for their own response.
+- Luckey Logic posts the recommended branch (post-Fortnite) and a migration note as a courtesy. Tenants choose whether to merge.
+
+### 11.7 Audit trail
+
+Every step lands in a normal git commit on `main` so the public record reflects what changed, when, and why. No private channel; this is operationally transparent by design.
+
+---
+
+## 12. Roadmap pointers
 
 Detailed item list lives in `CLAUDE.md`. This SPEC.md only locks behavior contracts and data shapes. When a contract changes, update this file in the same commit as the code.

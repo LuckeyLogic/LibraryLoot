@@ -169,6 +169,13 @@ export default function About() {
           own, or contact {brand.operatedBy} about hosting on the shared instance.
         </p>
         <p>
+          Have a question we didn&apos;t cover here — including what happens if
+          Epic Games asks us to stop using Fortnite branding? See the
+          {' '}<Link to="/faq">FAQ</Link>. The short version: your child&apos;s
+          progress and any already-won prizes are unaffected; the program
+          continues with broader prize categories.
+        </p>
+        <p>
           Built by {brand.operatedBy}.
         </p>
       </section>

@@ -44,6 +44,7 @@ export default function Footer() {
           <Link to="/">Home</Link>
           <Link to="/about">About the program</Link>
           <Link to="/donors">Donors</Link>
+          <Link to="/faq">FAQ</Link>
         </nav>
 
         <nav className={styles.col} aria-label="Legal">
