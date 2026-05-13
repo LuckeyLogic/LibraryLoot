@@ -499,8 +499,11 @@ export default function AdminAvatars() {
               />
             </div>
             <p className={avatarStyles.lightboxName}>{viewing.name}</p>
-            <p className={avatarStyles.lightboxHint}>
+            <p className={`${avatarStyles.lightboxHint} ${avatarStyles.lightboxHintDesktop}`}>
               Click outside or press <kbd>Esc</kbd> to close.
+            </p>
+            <p className={`${avatarStyles.lightboxHint} ${avatarStyles.lightboxHintTouch}`}>
+              Tap outside to close.
             </p>
           </div>
         </div>

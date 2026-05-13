@@ -237,6 +237,16 @@
   gap                  : var(--space-lg);
 }
 
+/* On phones the auto-fill rule collapses to one full-width column; locking
+ * to two columns keeps each tile compact so the lightbox feels like a real
+ * zoom-in instead of an "open the same size in a darker room" experience. */
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap                  : var(--space-md);
+  }
+}
+
 .tile {
   display       : flex;
   flex-direction: column;
@@ -341,7 +351,7 @@
   display  : flex;
   align-items    : center;
   justify-content: center;
-  padding  : var(--space-lg);
+  padding  : var(--space-md);
   background: rgba(13, 10, 31, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -396,15 +406,17 @@
   flex-direction: column;
   align-items   : center;
   gap           : var(--space-md);
-  max-width     : 90vw;
-  max-height    : 90vh;
+  max-width     : 95vw;
+  max-height    : 95vh;
   cursor        : default;
 }
 
-/* The same gradient surface as the tile, but bigger. */
+/* The same gradient surface as the tile, but much bigger. Uses 95vw on
+ * portrait phones (the dominant axis) and caps at 85vh on landscape /
+ * tablets so the image never overflows the screen vertically. */
 .lightboxSurface {
   position     : relative;
-  width        : min(70vh, 80vw);
+  width        : min(85vh, 95vw);
   aspect-ratio : 1 / 1;
   border-radius: var(--radius-lg);
   overflow     : hidden;
@@ -450,6 +462,19 @@
   border      : 1px solid rgba(183, 175, 216, 0.35);
   border-radius: 4px;
   color       : var(--hud-white);
+}
+
+/* On touch devices there's no Esc key — show a simpler hint, and on
+ * very narrow phones drop the hint entirely so the image owns the
+ * vertical space. */
+@media (hover: none) {
+  .lightboxHintDesktop { display: none; }
+}
+@media (hover: hover) {
+  .lightboxHintTouch { display: none; }
+}
+@media (max-width: 480px) {
+  .lightboxHint { display: none; }
 }
 
 .tileNameBtn {
