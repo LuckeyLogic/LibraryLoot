@@ -1,0 +1,22 @@
+/* Library Loot syntax highlighting — night-purple base, gold/cyan accents */
+
+.prettyprint { background: #14102c; color: #d5cff0; }
+.pln { color: #d5cff0; }
+.str { color: #80ffea; }   /* strings — hud cyan */
+.kwd { color: #ffd166; }   /* keywords — loot gold bright */
+.com { color: #7a72a8; font-style: italic; }  /* comments — muted purple */
+.typ { color: #b14aed; }   /* types — epic purple */
+.lit { color: #4cc9f0; }   /* literals — electric blue */
+.pun { color: #9c93c8; }   /* punctuation */
+.opn { color: #9c93c8; }
+.clo { color: #9c93c8; }
+.tag { color: #ffd166; }
+.atn { color: #4cc9f0; }
+.atv { color: #80ffea; }
+.dec { color: #ff006e; }
+.var { color: #d5cff0; }
+.fun { color: #ffb627; }   /* functions — loot gold */
+
+ol.linenums { margin-top: 0; margin-bottom: 0; color: #4e4480; }
+li.L0, li.L1, li.L2, li.L3, li.L4,
+li.L5, li.L6, li.L7, li.L8, li.L9 { list-style-type: decimal; }

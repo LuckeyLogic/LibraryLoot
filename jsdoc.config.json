@@ -1,19 +1,34 @@
 {
   "source": {
-    "include":        ["src"],
-    "includePattern": ".+\\.jsx?$",
-    "excludePattern": "(node_modules|dist|docs)"
+    "include": [
+      "src/components",
+      "src/pages",
+      "src/context",
+      "src/data",
+      "src/firebase.js",
+      "src/firebase",
+      "src/App.jsx",
+      "src/main.jsx"
+    ],
+    "includePattern": "\\.(jsx|js)$",
+    "excludePattern": "(node_modules|dist|docs|public)"
   },
-  "plugins": [
-    "plugins/markdown"
-  ],
   "opts": {
-    "destination": "./docs",
+    "destination": "docs",
     "recurse":     true,
-    "readme":      "./README.md"
+    "readme":      "jsdoc-readme.md",
+    "template":    "./jsdoc-template"
   },
+  "plugins": ["plugins/markdown"],
   "templates": {
-    "cleverLinks":    true,
-    "monospaceLinks": true
+    "cleverLinks":    false,
+    "monospaceLinks": false,
+    "default": {
+      "outputSourceFiles": true,
+      "includeDate":       false
+    }
+  },
+  "metadata": {
+    "title": "Library Loot — Developer Reference"
   }
 }

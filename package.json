@@ -12,10 +12,11 @@
     "url": "https://github.com/LuckeyLogic/LibraryLoot.git"
   },
   "scripts": {
-    "dev":     "vite",
-    "build":   "vite build",
-    "preview": "vite preview",
-    "docs":    "jsdoc -c jsdoc.config.json"
+    "dev":              "vite",
+    "build":            "vite build",
+    "preview":          "vite preview",
+    "docs:sync-tokens": "cp src/styles/tokens.css jsdoc-template/static/styles/tokens.css",
+    "docs":             "npm run docs:sync-tokens && jsdoc -c jsdoc.config.json"
   },
   "dependencies": {
     "firebase":         "^10.14.0",

@@ -26,8 +26,11 @@ firebase-debug.*.log
 !.vscode/extensions.json
 .idea/
 
-# Local-only assets (uploaded to Firebase Storage; not for source control)
+# Local-only assets (uploaded to Firebase Storage; not for source control).
+# Anything in a `temp*` folder is a staging area for assets pre-upload.
 temp folder for assets/
+temp-avatar/
+temp-*/
 
 # Local-only personal notes / TODOs (Vite-style .local convention — never committed)
 *.local.md
@@ -42,6 +45,10 @@ pnpm-debug.log*
 
 # JSDoc output
 docs/
+
+# Synced into the docs template's static/ folder by `npm run docs:sync-tokens`
+# — source of truth lives at src/styles/tokens.css.
+jsdoc-template/static/styles/tokens.css
 
 # Claude Code metadata
 .claude/

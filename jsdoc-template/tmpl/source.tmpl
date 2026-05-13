@@ -1,0 +1,17 @@
+<?js
+    var data = obj;
+?>
+    <section>
+        <article>
+            <div class="ll-source-search" id="ll-source-search-bar">
+                <span class="ll-search-icon" aria-hidden="true">⌕</span>
+                <input id="ll-source-search-input" type="search"
+                       class="ll-source-search-input" placeholder="Search in file…"
+                       aria-label="Search in source file" autocomplete="off">
+                <span id="ll-source-search-counter" class="ll-source-search-counter"></span>
+                <button id="ll-source-prev-btn" class="ll-source-nav-btn" title="Previous match (Shift+Enter)" aria-label="Previous match">↑</button>
+                <button id="ll-source-next-btn" class="ll-source-nav-btn" title="Next match (Enter)" aria-label="Next match">↓</button>
+            </div>
+            <pre class="prettyprint source linenums"><code><?js= data.code ?></code></pre>
+        </article>
+    </section>

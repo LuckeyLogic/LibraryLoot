@@ -397,14 +397,24 @@ Broken into shippable sub-items so each is a clean PR.
 #### [ ] ITEM 2d — Parent Dashboard + Child Sub-Profiles
 
 - `/account` parent page
-- Create / edit / delete child sub-profile UI (first name only, optional birth year)
-- Stock-avatar picker (~12 fan-art Fortnite avatars in Storage; child doc references `avatarId`). No photo upload, no AI generation — see project_library_loot.md memory + Privacy Policy stance
-- Writes to `/{tenant}/_main/users/{uid}/children/{childId}`
+- Create / edit / delete child sub-profile UI (first name only, optional birth year, `verified: false` default — see anti-cheat note in SPEC.md)
+- Stock-avatar picker (avatars uploaded via the admin avatar manager in 2e). Child doc references `avatarId`. No photo upload, no AI generation — see project_library_loot.md memory + Privacy Policy stance.
+- Writes to `/{tenant}/_main/users/{uid}/children/{childId}` (rules in place from 2c)
 
-#### [ ] ITEM 2e — Admin Settings Panel
+#### [ ] ITEM 2e — Admin Dashboard: Settings + Avatar Manager
 
-- `/admin/settings` editor for the `_main.support` block (organization name, program contact, COPPA contact)
-- About / Privacy / Terms pull live values from the tenant doc instead of `siteContent.support` defaults
+- `/admin/settings` editor for the `_main.support` block (organization name, program contact, COPPA contact, privacy contact) — About / Privacy / Terms switch to reading live tenant values instead of `siteContent.support` defaults
+- `/admin/avatars` CRUD for the default avatar pack — upload to `/{tenant}/avatars/{id}.{ext}` (Resize Images extension generates thumbnails); list / delete; metadata stored at `/{tenant}/_main/avatars/{avatarId}` for the picker in 2d to read
+
+#### [✅] ITEM 2g — Themed JSDoc Developer-Docs Site
+
+- Adapted from the mcl-central template: copied `publish.js` + `tmpl/*` + the prettify-jsdoc/prettify-tomorrow stylesheets; bulk-renamed `mcl-` CSS / ID prefixes to `ll-`; replaced MCL branding strings in `layout.tmpl` with Library Loot equivalents; renamed `mcl-enhance.js` → `ll-enhance.js`.
+- New `src/styles/tokens.css` is the single source of truth for design tokens (palette, typography, spacing, shape, effects, layout). `src/index.css` imports it; `jsdoc-template/static/styles/jsdoc-default.css` imports the same file (copied in by the `docs:sync-tokens` npm script before generation, then JSDoc copies it to `docs/styles/tokens.css`). One theme edit propagates to both surfaces.
+- New `prettify-library-loot.css` syntax-highlighting stylesheet (night-purple base, gold/cyan accents).
+- Drop the OpenSans webfont files mcl-central bundled — we use Google Fonts (Bungee + Nunito + JetBrains Mono) like the React app does.
+- `jsdoc-readme.md` is the docs site front page.
+- Output: `docs/` (gitignored). Generate locally with `npm run docs`.
+- **Not deployed yet** — kept local for v1. Future task: serve at `library-loot.web.app/docs/` via a Firebase Hosting rewrite or as a separate Hosting target.
 
 ### [ ] ITEM 3 — Book Management (Admin)
 
