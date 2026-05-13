@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none">
+  <!-- Library Loot apple-touch-icon — chest + lightning scene.
+       180×180 viewBox to match the rendered PNG size. Brown Fortnite-style
+       loot chest with gold trim, yellow lightning bolt erupting through the
+       open lid. Same purple gradient backdrop as the favicon.
+  -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="55%" r="60%">
+      <stop offset="0%"   stop-color="#9d4edd"/>
+      <stop offset="55%"  stop-color="#7b2cbf"/>
+      <stop offset="100%" stop-color="#1a1438"/>
+    </radialGradient>
+
+    <!-- Wood grain on the chest body: warm browns -->
+    <linearGradient id="chestBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#a0703c"/>
+      <stop offset="50%"  stop-color="#8b5a2b"/>
+      <stop offset="100%" stop-color="#5c3a1a"/>
+    </linearGradient>
+    <!-- Lid slightly lighter than body for depth -->
+    <linearGradient id="chestLid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#b78140"/>
+      <stop offset="100%" stop-color="#8b5a2b"/>
+    </linearGradient>
+
+    <!-- Gold metal bands and trim -->
+    <linearGradient id="goldBand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffd166"/>
+      <stop offset="100%" stop-color="#c9871f"/>
+    </linearGradient>
+
+    <!-- The lightning bolt -->
+    <linearGradient id="bolt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffd166"/>
+      <stop offset="100%" stop-color="#ffb627"/>
+    </linearGradient>
+
+    <!-- Soft glow behind the bolt -->
+    <radialGradient id="boltGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffd166" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ffd166" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Rounded-square background -->
+  <rect x="0" y="0" width="180" height="180" rx="36" ry="36" fill="url(#bg)"/>
+
+  <!-- Bolt glow halo (drawn first so chest sits on top of the haze) -->
+  <ellipse cx="90" cy="78" rx="62" ry="74" fill="url(#boltGlow)"/>
+
+  <!-- Chest body -->
+  <rect x="36" y="86" width="108" height="64" rx="6" ry="6"
+        fill="url(#chestBody)" stroke="#3d2410" stroke-width="3"/>
+
+  <!-- Wood-grain plank seams on the body -->
+  <line x1="60" y1="92" x2="60" y2="148" stroke="#5c3a1a" stroke-width="1.5" opacity="0.7"/>
+  <line x1="90" y1="92" x2="90" y2="148" stroke="#5c3a1a" stroke-width="1.5" opacity="0.7"/>
+  <line x1="120" y1="92" x2="120" y2="148" stroke="#5c3a1a" stroke-width="1.5" opacity="0.7"/>
+
+  <!-- Gold band at the top and bottom of the chest body -->
+  <rect x="36" y="90" width="108" height="6" fill="url(#goldBand)" stroke="#3d2410" stroke-width="1"/>
+  <rect x="36" y="142" width="108" height="6" fill="url(#goldBand)" stroke="#3d2410" stroke-width="1"/>
+
+  <!-- Chest lid (open, tilted back). One closed curve so the gradient fills cleanly -->
+  <path d="M30 86 Q 30 56, 90 50 Q 150 56, 150 86 L 150 90 L 30 90 Z"
+        fill="url(#chestLid)" stroke="#3d2410" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Gold trim on the lid edge -->
+  <path d="M30 86 Q 30 60, 90 54 Q 150 60, 150 86"
+        fill="none" stroke="url(#goldBand)" stroke-width="3"/>
+
+  <!-- Lid hinge highlights -->
+  <line x1="30" y1="90" x2="150" y2="90" stroke="#ffd166" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- Lock plate -->
+  <rect x="82" y="106" width="16" height="22" rx="2" ry="2"
+        fill="#3d2410" stroke="url(#goldBand)" stroke-width="2"/>
+  <circle cx="90" cy="115" r="2.5" fill="#ffd166"/>
+
+  <!-- Lightning bolt erupting from the open chest -->
+  <path d="M104 8 L 64 76 L 88 76 L 76 124 L 130 64 L 104 64 L 116 8 Z"
+        fill="url(#bolt)" stroke="#0d0a1f" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Sparkle accents -->
+  <circle cx="40" cy="50" r="3.5" fill="#80ffea"/>
+  <circle cx="146" cy="62" r="4"   fill="#ffd166"/>
+  <circle cx="144" cy="132" r="3"  fill="#80ffea"/>
+  <circle cx="30" cy="120" r="2.5" fill="#ffd166"/>
+</svg>

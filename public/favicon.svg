@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Library Loot favicon — glyph only.
+       Yellow/gold lightning bolt on a deep-purple gradient. Matches the
+       lightning ⚡ glyph used elsewhere in the site (Navbar brand mark,
+       hero sparkles). Palette pulled from tokens.css:
+         night         #0d0a1f
+         neon-purple   #9d4edd
+         neon-purple-deep #7b2cbf
+         loot-gold     #ffb627
+         loot-gold-bright #ffd166
+  -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="65%">
+      <stop offset="0%"   stop-color="#9d4edd"/>
+      <stop offset="55%"  stop-color="#7b2cbf"/>
+      <stop offset="100%" stop-color="#1a1438"/>
+    </radialGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffd166"/>
+      <stop offset="100%" stop-color="#ffb627"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="64" height="64" rx="14" ry="14" fill="url(#bg)"/>
+
+  <!-- Lightning bolt, dynamic angle, slightly oversized so it dominates at 16px -->
+  <path d="M40 4 L 16 36 L 27 36 L 22 60 L 50 26 L 37 26 L 42 4 Z"
+        fill="url(#bolt)" stroke="#0d0a1f" stroke-width="2" stroke-linejoin="round"/>
+</svg>
