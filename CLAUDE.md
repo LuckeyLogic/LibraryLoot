@@ -402,10 +402,24 @@ Broken into shippable sub-items so each is a clean PR.
 - Stock-avatar picker (avatars uploaded via the admin avatar manager in 2e). Child doc references `avatarId`. No photo upload, no AI generation — see project_library_loot.md memory + Privacy Policy stance.
 - Writes to `/{tenant}/_main/users/{uid}/children/{childId}` (rules in place from 2c)
 
-#### [ ] ITEM 2e — Admin Dashboard: Settings + Avatar Manager
+#### ITEM 2e — Admin Dashboard (sliced)
 
-- `/admin/settings` editor for the `_main.support` block (organization name, program contact, COPPA contact, privacy contact) — About / Privacy / Terms switch to reading live tenant values instead of `siteContent.support` defaults
-- `/admin/avatars` CRUD for the default avatar pack — upload to `/{tenant}/avatars/{id}.{ext}` (Resize Images extension generates thumbnails); list / delete; metadata stored at `/{tenant}/_main/avatars/{avatarId}` for the picker in 2d to read
+##### [✅] ITEM 2e.1 — Admin shell + Settings panel + tenant-live legal pages
+
+- New `useTenantSettings` hook (`src/hooks/useTenantSettings.js`) — live subscription to `/{tenantId}/_main` with `siteContent` fallbacks for unset fields. Exposes `{ settings, support, legal, loading, error }`.
+- New `AdminLayout` (`src/components/AdminLayout.jsx`) — sidebar shell with tenant ID + sign-in identity + nav links (Overview / Settings / Avatars). Collapses to a top strip on mobile.
+- New admin pages under `src/pages/admin/`:
+  - `AdminIndex` — `/admin` landing. Operator-snapshot card, supplement-status card, "Coming next" avatars card.
+  - `AdminSettings` — `/admin/settings` editor for `_main.support` (organization name, program / COPPA / privacy contact emails, mailing address, contact blurb) and `_main.legal.{privacyPolicySupplement, termsSupplement}` with `updatedAt` timestamps. Writes via `setDoc({merge:true})`.
+- Navbar — adds `Admin` link in the auth slot when `useAuth().isAdmin === true`.
+- About / Privacy / Terms — switched from `siteContent.support` defaults to `useTenantSettings()`. Privacy + Terms render a `TenantSupplement` section below the base policy when the tenant has supplements set (plain-text paragraphs split on double newlines).
+- `firestore.rules` — `/{tenantId}/_main` is now **public-read**. The doc carries only operator contact + legal supplements + branding + verification config — none of it sensitive, all of it appropriate to surface on the public About / Privacy / Terms pages for anonymous visitors. Writes still restricted to tenant admins.
+- Rules deployed via `firebase deploy --only firestore:rules`.
+
+##### [ ] ITEM 2e.2 — Avatar manager + image optimizer
+
+- `/admin/avatars` CRUD for the default avatar pack — upload to `/{tenant}/avatars/{id}.png` (Resize Images extension generates thumbnails); list / delete; metadata stored at `/{tenant}/_main/avatars/{avatarId}` for the picker in 2d to read.
+- New `src/utils/imageOptimize.js` — native Canvas-API client-side resize/compress before upload. Reusable for sponsor logos (ITEM 4) and book covers (ITEM 3).
 
 #### [✅] ITEM 2h — Docs Auto-Build + Deploy at `/docs`
 

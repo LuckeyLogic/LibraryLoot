@@ -11,6 +11,8 @@ import { Routes, Route }      from 'react-router-dom'
 import Navbar                 from './components/Navbar.jsx'
 import Footer                 from './components/Footer.jsx'
 import PrivateRoute           from './components/PrivateRoute.jsx'
+import AdminRoute             from './components/AdminRoute.jsx'
+import AdminLayout            from './components/AdminLayout.jsx'
 
 import Home                   from './pages/Home.jsx'
 import About                  from './pages/About.jsx'
@@ -19,6 +21,8 @@ import Sponsor                from './pages/Sponsor.jsx'
 import Login                  from './pages/Login.jsx'
 import Signup                 from './pages/Signup.jsx'
 import AdminSetup             from './pages/AdminSetup.jsx'
+import AdminIndex             from './pages/admin/AdminIndex.jsx'
+import AdminSettings          from './pages/admin/AdminSettings.jsx'
 import Terms                  from './pages/Terms.jsx'
 import Privacy                from './pages/Privacy.jsx'
 import NotFound               from './pages/NotFound.jsx'
@@ -52,6 +56,17 @@ export default function App() {
               </PrivateRoute>
             }
           />
+          <Route
+            path   ="/admin"
+            element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }
+          >
+            <Route index            element={<AdminIndex />}    />
+            <Route path="settings"  element={<AdminSettings />} />
+          </Route>
           <Route path="/terms"   element={<Terms />}   />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="*"        element={<NotFound />} />

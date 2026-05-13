@@ -12,6 +12,8 @@ import { Link }           from 'react-router-dom'
 
 import Disclaimer         from '../components/Disclaimer.jsx'
 
+import useTenantSettings  from '../hooks/useTenantSettings.js'
+
 import siteContent        from '../data/siteContent.js'
 
 import styles             from './About.module.css'
@@ -24,10 +26,10 @@ import styles             from './About.module.css'
  */
 export default function About() {
 
-  // `support` is the per-tenant contact block. siteContent provides the
-  // fallback default; once ITEM 2 wires tenant settings, the About page
-  // pulls live values from `/{tenantId}/_main.support`.
-  const { brand, story, support } = siteContent
+  // `support` resolves from /{tenantId}/_main.support with siteContent
+  // defaults as the fallback for any unset field — see useTenantSettings.
+  const { brand, story } = siteContent
+  const { support }      = useTenantSettings()
 
   return (
     <article className={`container ${styles.aboutWrap}`}>

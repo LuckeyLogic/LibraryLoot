@@ -30,9 +30,9 @@ const links = [
  */
 export default function Navbar() {
 
-  const { user, signOut } = useAuth()
-  const navigate          = useNavigate()
-  const [open, setOpen]   = useState(false)
+  const { user, isAdmin, signOut } = useAuth()
+  const navigate                   = useNavigate()
+  const [open, setOpen]            = useState(false)
 
   const closeMenu = () => setOpen(false)
 
@@ -100,6 +100,17 @@ export default function Navbar() {
 
           {user ? (
             <>
+              {isAdmin ? (
+                <NavLink
+                  to        ="/admin"
+                  onClick   ={closeMenu}
+                  className ={({ isActive }) =>
+                    `${styles.navLink} ${isActive ? styles.navLinkActive : ''}`
+                  }
+                >
+                  Admin
+                </NavLink>
+              ) : null}
               <span className={styles.greeting} title={user.email || ''}>
                 Hi, {greeting}
               </span>

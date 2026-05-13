@@ -11,9 +11,37 @@ import { Link }           from 'react-router-dom'
 
 import Disclaimer         from '../components/Disclaimer.jsx'
 
+import useTenantSettings  from '../hooks/useTenantSettings.js'
+
 import siteContent        from '../data/siteContent.js'
 
 import styles             from './Legal.module.css'
+
+/**
+ * TenantSupplement — renders an optional legal supplement string as paragraph
+ * blocks (plain text, split on double newlines). Returns null when no
+ * supplement is set, so the layout collapses cleanly.
+ *
+ * @param   {Object}  props
+ * @param   {string?} props.body       - Plain-text supplement.
+ * @param   {string}  props.heading    - Section heading.
+ * @param   {string}  props.orgName    - Operator's display name.
+ * @returns {JSX.Element|null}
+ */
+function TenantSupplement({ body, heading, orgName }) {
+  if (!body) return null
+  const paragraphs = body.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+  return (
+    <section>
+      <h2>{heading}</h2>
+      <p className="muted" style={{ marginBottom: '1rem' }}>
+        Additional terms from <strong>{orgName}</strong>. Applies to this Library
+        Loot instance in addition to the base policy above.
+      </p>
+      {paragraphs.map((p, i) => <p key={i}>{p}</p>)}
+    </section>
+  )
+}
 
 /**
  * Privacy — Privacy Policy page.
@@ -22,9 +50,10 @@ import styles             from './Legal.module.css'
  */
 export default function Privacy() {
 
-  // `support` is the per-tenant operator contact. Falls back to siteContent
-  // defaults today; ITEM 2 will pull live values from /{tenantId}/_main.support.
-  const { brand, support } = siteContent
+  // `support` + `legal` resolve from /{tenantId}/_main with siteContent
+  // defaults. Tenant admins edit these via /admin/settings.
+  const { brand }            = siteContent
+  const { support, legal }   = useTenantSettings()
 
   return (
     <article className={`container ${styles.legalWrap}`}>
@@ -161,6 +190,12 @@ export default function Privacy() {
       </section>
 
       <Disclaimer tone="prominent" />
+
+      <TenantSupplement
+        heading="Additional privacy terms from the operator"
+        body   ={legal.privacyPolicySupplement}
+        orgName={support.organizationName}
+      />
 
       <section>
         <h2>7. Contact</h2>

@@ -12,9 +12,38 @@ import { Link }           from 'react-router-dom'
 
 import Disclaimer         from '../components/Disclaimer.jsx'
 
+import useTenantSettings  from '../hooks/useTenantSettings.js'
+
 import siteContent        from '../data/siteContent.js'
 
 import styles             from './Legal.module.css'
+
+/**
+ * TenantSupplement — renders an optional legal supplement string as
+ * paragraph blocks. Mirror of the helper in Privacy.jsx; duplicated for
+ * now since the two pages are the only consumers. Lift to a shared
+ * component if a third surface needs it.
+ *
+ * @param   {Object}  props
+ * @param   {string?} props.body
+ * @param   {string}  props.heading
+ * @param   {string}  props.orgName
+ * @returns {JSX.Element|null}
+ */
+function TenantSupplement({ body, heading, orgName }) {
+  if (!body) return null
+  const paragraphs = body.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+  return (
+    <section>
+      <h2>{heading}</h2>
+      <p className="muted" style={{ marginBottom: '1rem' }}>
+        Additional terms from <strong>{orgName}</strong>. Applies to this Library
+        Loot instance in addition to the base terms above.
+      </p>
+      {paragraphs.map((p, i) => <p key={i}>{p}</p>)}
+    </section>
+  )
+}
 
 /**
  * Terms — Terms of Service page.
@@ -23,9 +52,10 @@ import styles             from './Legal.module.css'
  */
 export default function Terms() {
 
-  // `support` is the per-tenant operator contact. Falls back to siteContent
-  // defaults today; ITEM 2 will pull live values from /{tenantId}/_main.support.
-  const { brand, support } = siteContent
+  // `support` + `legal` resolve from /{tenantId}/_main with siteContent
+  // defaults. Tenant admins edit these via /admin/settings.
+  const { brand }            = siteContent
+  const { support, legal }   = useTenantSettings()
 
   return (
     <article className={`container ${styles.legalWrap}`}>
@@ -134,6 +164,12 @@ export default function Terms() {
       </section>
 
       <Disclaimer tone="prominent" />
+
+      <TenantSupplement
+        heading="Additional terms from the operator"
+        body   ={legal.termsSupplement}
+        orgName={support.organizationName}
+      />
 
       <section>
         <h2>7. Termination</h2>

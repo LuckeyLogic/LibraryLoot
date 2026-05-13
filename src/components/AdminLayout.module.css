@@ -1,0 +1,128 @@
+/*  src/components/AdminLayout.module.css
+ */
+
+.adminWrap {
+  display              : grid;
+  grid-template-columns: 260px 1fr;
+  gap                  : 0;
+  min-height           : calc(100vh - var(--navbar-height));
+  width                : 100%;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background     : rgba(13, 10, 31, 0.92);
+  border-right   : 1px solid rgba(157, 78, 221, 0.35);
+  padding        : var(--space-xl) var(--space-lg);
+  display        : flex;
+  flex-direction : column;
+  gap            : var(--space-lg);
+}
+
+.sidebarHeader {
+  padding-bottom: var(--space-md);
+  border-bottom : 1px solid rgba(183, 175, 216, 0.18);
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.85rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--loot-gold-bright);
+  margin         : 0 0 var(--space-sm);
+}
+
+.tenant {
+  display       : flex;
+  flex-direction: column;
+  gap           : 0.15rem;
+  margin        : 0 0 var(--space-sm);
+}
+
+.tenantLabel {
+  font-family    : var(--font-display);
+  font-size      : 0.7rem;
+  letter-spacing : 0.18em;
+  text-transform : uppercase;
+  color          : var(--hud-muted);
+}
+
+.tenantId {
+  font-family : var(--font-mono);
+  font-size   : 0.95rem;
+  color       : var(--electric-blue);
+  word-break  : break-all;
+}
+
+.who {
+  font-size : var(--fs-small);
+  color     : var(--hud-muted);
+  margin    : 0;
+  max-width : 100%;
+  overflow  : hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── NAV ── */
+.nav {
+  display        : flex;
+  flex-direction : column;
+  gap            : var(--space-xs);
+}
+
+.navLink {
+  display        : block;
+  padding        : 0.65rem 0.85rem;
+  border-radius  : var(--radius-sm);
+  font-family    : var(--font-display);
+  font-size      : 0.95rem;
+  letter-spacing : 0.04em;
+  text-transform : uppercase;
+  color          : var(--hud-muted);
+  text-decoration: none;
+  transition     : background 0.15s ease, color 0.15s ease;
+}
+
+.navLink:hover {
+  background: rgba(157, 78, 221, 0.18);
+  color     : var(--hud-white);
+}
+
+.navLinkActive {
+  background: linear-gradient(135deg, rgba(157, 78, 221, 0.35), rgba(255, 182, 39, 0.18));
+  color     : var(--loot-gold-bright);
+}
+
+/* ── CONTENT ── */
+.content {
+  padding   : var(--space-xl) var(--space-2xl);
+  max-width : 920px;
+  width     : 100%;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 760px) {
+  .adminWrap {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    border-right : none;
+    border-bottom: 1px solid rgba(157, 78, 221, 0.35);
+    padding      : var(--space-lg);
+    flex-direction: row;
+    flex-wrap     : wrap;
+    align-items   : center;
+    gap           : var(--space-lg);
+  }
+  .sidebarHeader { flex: 1 1 auto; padding-bottom: 0; border-bottom: none; }
+  .nav {
+    flex-direction: row;
+    gap           : var(--space-xs);
+    flex          : 1 1 100%;
+    overflow-x    : auto;
+  }
+  .navLink { flex: 0 0 auto; }
+  .content { padding: var(--space-lg); }
+}

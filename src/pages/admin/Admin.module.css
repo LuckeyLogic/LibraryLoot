@@ -1,0 +1,201 @@
+/*  src/pages/admin/Admin.module.css
+ *
+ *  Shared styles for admin pages — page header, cards, forms, save row.
+ */
+
+.page {
+  width    : 100%;
+  max-width: 880px;
+}
+
+/* ── PAGE HEADER ── */
+.pageHeader {
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid rgba(157, 78, 221, 0.35);
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.85rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--electric-blue);
+  margin         : 0 0 var(--space-sm);
+}
+
+.title {
+  font-family : var(--font-display);
+  font-size   : clamp(1.75rem, 3.5vw, 2.5rem);
+  background  : linear-gradient(120deg, var(--loot-gold-bright), var(--neon-purple));
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+  margin                 : 0 0 var(--space-sm);
+}
+
+.lede {
+  color    : var(--hud-muted);
+  font-size: 1rem;
+  margin   : 0;
+  max-width: 60ch;
+}
+
+/* ── CARDS (Overview) ── */
+.cardGrid {
+  display              : grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap                  : var(--space-lg);
+}
+
+.card {
+  background     : rgba(26, 20, 56, 0.6);
+  border         : 1px solid rgba(157, 78, 221, 0.35);
+  border-radius  : var(--radius-md);
+  padding        : var(--space-lg);
+  display        : flex;
+  flex-direction : column;
+  gap            : var(--space-xs);
+  transition     : border-color 0.18s ease, transform 0.18s ease;
+}
+
+.card:hover {
+  border-color: var(--electric-blue);
+  transform   : translateY(-2px);
+}
+
+.cardEyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.75rem;
+  letter-spacing : 0.18em;
+  text-transform : uppercase;
+  color          : var(--loot-gold-bright);
+  margin         : 0;
+}
+
+.cardTitle {
+  font-family : var(--font-display);
+  font-size   : 1.3rem;
+  margin      : 0 0 var(--space-sm);
+  color       : var(--hud-white);
+}
+
+.cardLine {
+  margin   : 0;
+  color    : var(--hud-muted);
+  font-size: var(--fs-small);
+}
+
+.k {
+  color         : var(--hud-white);
+  font-weight   : 700;
+  letter-spacing: 0.02em;
+}
+
+.cardCta {
+  margin-top: var(--space-md);
+  align-self: flex-start;
+}
+
+/* ── FORM ── */
+.form {
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-xl);
+}
+
+.fieldset {
+  border         : 1px solid rgba(157, 78, 221, 0.3);
+  border-radius  : var(--radius-md);
+  padding        : var(--space-lg) var(--space-lg) var(--space-md);
+  background     : rgba(13, 10, 31, 0.55);
+}
+
+.legend {
+  font-family    : var(--font-display);
+  font-size      : 1.05rem;
+  letter-spacing : 0.04em;
+  color          : var(--loot-gold-bright);
+  padding        : 0 var(--space-sm);
+}
+
+.fineprint {
+  color     : var(--hud-muted);
+  font-size : var(--fs-small);
+  margin    : 0 0 var(--space-md);
+  max-width : 65ch;
+  line-height: 1.55;
+}
+
+.field {
+  display       : flex;
+  flex-direction: column;
+  gap           : 0.35rem;
+  margin-bottom : var(--space-md);
+}
+
+.fieldGrid {
+  display              : grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap                  : var(--space-md);
+}
+
+.label {
+  font-size     : var(--fs-small);
+  color         : var(--hud-muted);
+  font-weight   : 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.input {
+  width        : 100%;
+  padding      : 0.65rem 0.8rem;
+  background   : rgba(13, 10, 31, 0.7);
+  color        : var(--hud-white);
+  border       : 1px solid rgba(183, 175, 216, 0.3);
+  border-radius: var(--radius-sm);
+  font-family  : var(--font-body);
+  font-size    : 1rem;
+  transition   : border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus {
+  outline     : none;
+  border-color: var(--electric-blue);
+  box-shadow  : 0 0 0 3px rgba(76, 201, 240, 0.18);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.textarea {
+  resize     : vertical;
+  font-family: var(--font-mono);
+  font-size  : 0.92rem;
+  line-height: 1.55;
+}
+
+/* ── SAVE ROW ── */
+.saveRow {
+  display    : flex;
+  align-items: center;
+  gap        : var(--space-md);
+  flex-wrap  : wrap;
+}
+
+.savedNote {
+  color     : var(--hud-cyan);
+  font-size : var(--fs-small);
+}
+
+.error {
+  margin-top   : var(--space-md);
+  padding      : 0.7rem 0.85rem;
+  background   : rgba(255, 0, 110, 0.12);
+  border       : 1px solid var(--magenta-pop);
+  color        : var(--hud-white);
+  border-radius: var(--radius-sm);
+  font-size    : var(--fs-small);
+}

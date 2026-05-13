@@ -56,8 +56,13 @@ service cloud.firestore {
     }
 
     // ── TENANT SETTINGS ──
+    // Public-read by design — the doc contains operator contact info,
+    // legal supplements, and tenant branding that surface on the
+    // public About / Privacy / Terms pages for ANY visitor (signed in
+    // or not). Nothing here is sensitive. Only admins of this tenant
+    // can write.
     match /{tenantId}/_main {
-      allow read : if inTenant(tenantId);
+      allow read : if true;
       allow write: if isTenantAdmin(tenantId);
     }
 
