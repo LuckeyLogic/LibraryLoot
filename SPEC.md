@@ -319,6 +319,41 @@ A core constraint: kids cannot fake their way to a reward by feeding the book to
 | **Oral check-off** | Child answers librarian questions verbally at the desk. No site grading. | Very strong — no digital surface to cheat against. |
 | **Parent sign-off** | Parent confirms reading after a short conversation. No site grading. | Depends on the parent. Designed for at-home programs. |
 
+### Reader's promise (honor-system pledge at challenge acceptance)
+
+At the moment a child (or their parent acting for them) accepts a challenge on a book, a kid-readable honor-system pledge appears before the challenge document is created. Single-checkbox consent, single accept button. The pledge text + version is **snapshotted** into the challenge document so a librarian reviewing a completion six months later sees the exact promise that was taken at the time, even after the platform's pledge copy has been edited.
+
+**Pledge content** (lives in `siteContent.honestyPledge`, version-stamped):
+
+> Reader's promise — Quick promises before we start.
+> Just a few honest promises. These are between you and the librarian — nobody's secretly checking, but they're how the program stays fair for every reader.
+> - I haven't read this book before.
+> - I'll read the whole book myself, or have a grown-up read it to me.
+> - I won't ask ChatGPT or any AI helper to read the book or answer the quiz for me.
+> - If I get stuck, I'll ask a grown-up — not the internet.
+> ☐ I promise to keep these.
+> [ I promise — accept challenge ]
+> *Your grown-up will see this promise when they approve your finished book.*
+
+**Recorded on the challenge document:**
+
+```js
+challenge.pledge = {
+  acceptedAt: Timestamp,
+  version   : 'v1',
+  statements: [ ... snapshot of the four pledge statements ... ]
+}
+```
+
+**Surfaces that show the pledge again:**
+
+- The librarian / parent approval view (so the human approving a completion sees exactly what the kid promised).
+- The parent dashboard's "review what your kid agreed to" detail panel.
+
+**Why a pledge instead of stronger gating**: a determined cheater can still cheat — the structural defenses (verified-in-person flag, librarian approval, recall-quiz design, time limit) are what actually stop bulk abuse. The pledge is a *light* social-pressure layer, kid-readable, that makes the honest path the obvious one. The Library Loot UX deliberately treats kids as honest participants by default and uses physical / human gates (librarian verification + librarian approval) as the real anti-cheat.
+
+The reusable React component is `src/components/HonestyPledge.jsx`.
+
 ### Quiz authoring flow
 
 1. Librarian opens the book in the admin panel.

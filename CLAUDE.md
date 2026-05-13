@@ -482,9 +482,11 @@ Broken into shippable sub-items so each is a clean PR.
 ### [ ] ITEM 5 — Challenge Lifecycle + Quiz Verification
 
 - `/{tenant}/_main/challenges/{challengeId}` — state machine: open → accepted → submitted → approved → rewarded
+- **Reader's promise (honor-system pledge) at challenge acceptance** — `src/components/HonestyPledge.jsx` already exists (built during ITEM 2j). Wire it into the challenge-acceptance UI so the kid (or parent) takes the four pledge statements + single checkbox + accept button BEFORE the challenge doc is created. Snapshot the pledge text + version into the challenge doc so a librarian reviewing a completion months later sees the EXACT promise that was taken (see SPEC.md §5 Reader's promise).
 - Quiz authoring flow: AI-assisted (Firebase AI Logic + Gemini 2.0 Flash) → librarian approval → publish
 - Quiz pool of 15-20 questions per book; quiz samples 8 randomly per attempt
 - Time-limited attempt; submission requires final approval from librarian or parent before reward release
+- Librarian / parent approval view should re-display the pledge statements from the challenge document for transparency.
 
 ### [ ] ITEM 6 — Verifiable Random Prize Draw
 

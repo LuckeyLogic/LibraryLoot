@@ -135,6 +135,28 @@ const siteContent = {
     copyrightYear: 2026
   },
 
+  // ── READER'S PROMISE ──
+  // Honor-system pledge shown when a child (or their parent) accepts a
+  // challenge on a book. Kid-readable tone — first-person statements that
+  // name the cheat vectors directly without being preachy. Stored once in
+  // siteContent so the wording stays consistent across the
+  // challenge-acceptance UI (ITEM 5) and any future surface that needs to
+  // remind readers what they agreed to (e.g. the librarian approval view).
+  honestyPledge: {
+    eyebrow      : 'Reader\'s promise',
+    title        : 'Quick promises before we start',
+    intro        : 'Just a few honest promises. These are between you and the librarian — nobody\'s secretly checking, but they\'re how the program stays fair for every reader.',
+    statements   : [
+      'I haven\'t read this book before.',
+      'I\'ll read the whole book myself, or have a grown-up read it to me.',
+      'I won\'t ask ChatGPT or any AI helper to read the book or answer the quiz for me.',
+      'If I get stuck, I\'ll ask a grown-up — not the internet.'
+    ],
+    consentLabel : 'I promise to keep these.',
+    acceptLabel  : 'I promise — accept challenge',
+    footnote     : 'Your grown-up will see this promise when they approve your finished book.'
+  },
+
   // ── FAQ ──
   // Public Q&A surfaced at /faq. Keep answers concrete and short. When
   // the same answer needs to evolve (e.g., Epic Games policy change),

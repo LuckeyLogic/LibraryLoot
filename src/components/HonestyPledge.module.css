@@ -1,0 +1,139 @@
+/*  src/components/HonestyPledge.module.css
+ */
+
+.card {
+  padding      : var(--space-xl);
+  background   : linear-gradient(135deg, rgba(157, 78, 221, 0.18), rgba(255, 182, 39, 0.10));
+  border       : var(--border-legendary);
+  border-radius: var(--radius-lg);
+  box-shadow   : var(--shadow-loot);
+  max-width    : 560px;
+  margin       : 0 auto;
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.85rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--loot-gold-bright);
+  margin         : 0 0 var(--space-sm);
+}
+
+.title {
+  font-family : var(--font-display);
+  font-size   : 1.5rem;
+  color       : var(--hud-white);
+  margin      : 0 0 var(--space-sm);
+  line-height : 1.2;
+}
+
+.book {
+  margin    : 0 0 var(--space-md);
+  color     : var(--hud-muted);
+  font-size : var(--fs-small);
+}
+
+.book strong {
+  color: var(--electric-blue);
+}
+
+.intro {
+  color      : var(--hud-white);
+  font-size  : 1rem;
+  line-height: 1.55;
+  margin     : 0 0 var(--space-lg);
+}
+
+.statements {
+  list-style    : none;
+  padding       : 0;
+  margin        : 0 0 var(--space-lg);
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-sm);
+}
+
+.statements li {
+  position     : relative;
+  padding-left : 1.7rem;
+  color        : var(--hud-white);
+  font-size    : 1rem;
+  line-height  : 1.5;
+}
+
+.statements li::before {
+  content    : '✓';
+  position   : absolute;
+  left       : 0;
+  top        : -1px;
+  width      : 22px;
+  height     : 22px;
+  display    : flex;
+  align-items    : center;
+  justify-content: center;
+  background : linear-gradient(135deg, var(--loot-gold-bright), var(--loot-gold));
+  color      : var(--night);
+  border-radius: 50%;
+  font-size  : 13px;
+  font-weight: 900;
+}
+
+.consentRow {
+  display     : flex;
+  align-items : flex-start;
+  gap         : var(--space-sm);
+  padding     : var(--space-md);
+  background  : rgba(13, 10, 31, 0.5);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-lg);
+  cursor      : pointer;
+  color       : var(--hud-white);
+  font-size   : 1.05rem;
+  line-height : 1.4;
+}
+
+.consentRow input[type="checkbox"] {
+  margin-top  : 3px;
+  width       : 20px;
+  height      : 20px;
+  accent-color: var(--neon-purple);
+  cursor      : pointer;
+  flex        : 0 0 auto;
+}
+
+.actions {
+  display    : flex;
+  flex-wrap  : wrap;
+  gap        : var(--space-md);
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.cancelBtn {
+  font-family   : var(--font-display);
+  font-size     : 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color         : var(--hud-muted);
+  background    : transparent;
+  border        : 1px solid rgba(183, 175, 216, 0.3);
+  border-radius : var(--radius-md);
+  padding       : 0.65rem 1.1rem;
+  cursor        : pointer;
+  touch-action  : manipulation;
+}
+
+@media (hover: hover) {
+  .cancelBtn:hover {
+    color       : var(--hud-white);
+    border-color: var(--hud-muted);
+  }
+}
+
+.footnote {
+  margin    : 0;
+  color     : var(--hud-muted);
+  font-size : var(--fs-small);
+  font-style: italic;
+}
