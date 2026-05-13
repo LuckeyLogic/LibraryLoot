@@ -416,10 +416,18 @@ Broken into shippable sub-items so each is a clean PR.
 - `firestore.rules` — `/{tenantId}/_main` is now **public-read**. The doc carries only operator contact + legal supplements + branding + verification config — none of it sensitive, all of it appropriate to surface on the public About / Privacy / Terms pages for anonymous visitors. Writes still restricted to tenant admins.
 - Rules deployed via `firebase deploy --only firestore:rules`.
 
-##### [ ] ITEM 2e.2 — Avatar manager + image optimizer
+##### [✅] ITEM 2e.2 — Avatar manager + image optimizer
 
-- `/admin/avatars` CRUD for the default avatar pack — upload to `/{tenant}/avatars/{id}.png` (Resize Images extension generates thumbnails); list / delete; metadata stored at `/{tenant}/_main/avatars/{avatarId}` for the picker in 2d to read.
-- New `src/utils/imageOptimize.js` — native Canvas-API client-side resize/compress before upload. Reusable for sponsor logos (ITEM 4) and book covers (ITEM 3).
+- New `src/utils/imageOptimize.js` — native Canvas-API client-side resize + recompress. Defaults to 512px longest side and PNG output to preserve transparency. Returns `{blob, width, height, sizeBefore, sizeAfter}` so the UI can show before/after byte counts. Reusable for sponsor logos (ITEM 4) and book covers (ITEM 3).
+- `/admin/avatars` page (`src/pages/admin/AdminAvatars.jsx`) — CRUD for the tenant's default avatar pack.
+  - Multi-file upload: pick → optimize → upload to `/{tenant}/avatars/{avatarId}.png` → write doc at `/{tenant}/_main/avatars/{avatarId}` with `{id, name, storagePath, downloadUrl, createdAt}`. Friendly default name derived from the filename.
+  - In-flight queue shows per-file status (queued / optimizing / uploading / done / error) and byte savings (sizeBefore → sizeAfter). Done entries auto-clear after 2.5s.
+  - Tile grid renders each transparent PNG on a Fortnite-vibe radial-gradient surface (Miguel's design: avatars are bgless, picker provides the gradient).
+  - Per-tile Delete with confirmation. Removes both the Storage object and the Firestore doc. Tolerates already-deleted Storage objects so a partially-cleaned avatar can still be removed.
+  - Resize Images Firebase Extension fires automatically on upload and produces thumbnails under `/{tenant}/avatars/thumbs/`. Not yet referenced by the picker — future optimization once the parent dashboard lands.
+- Storage Rules — added `/{tenantId}/avatars/{file=**}` block: public read, admin write (matches the assets pattern). Deployed.
+- Firestore Rules — added `/{tenantId}/_main/avatars/{avatarId}`: public read (so the picker can render the grid without auth), admin write. Deployed.
+- AdminLayout sidebar — Avatars link gates correctly on `isAdmin`.
 
 #### [✅] ITEM 2h — Docs Auto-Build + Deploy at `/docs`
 

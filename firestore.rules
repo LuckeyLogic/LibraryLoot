@@ -78,5 +78,15 @@ service cloud.firestore {
       allow read, write: if (isSelf(uid) && inTenant(tenantId)) ||
                             isTenantAdmin(tenantId);
     }
+
+    // ── DEFAULT AVATAR PACK ──
+    // Metadata for the avatars the admin uploaded to Storage at
+    // /{tenantId}/avatars/. Public-read so the parent dashboard's
+    // child-profile picker can render the grid without auth gating.
+    // Admin-write only.
+    match /{tenantId}/_main/avatars/{avatarId} {
+      allow read : if true;
+      allow write: if isTenantAdmin(tenantId);
+    }
   }
 }

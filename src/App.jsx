@@ -23,6 +23,7 @@ import Signup                 from './pages/Signup.jsx'
 import AdminSetup             from './pages/AdminSetup.jsx'
 import AdminIndex             from './pages/admin/AdminIndex.jsx'
 import AdminSettings          from './pages/admin/AdminSettings.jsx'
+import AdminAvatars           from './pages/admin/AdminAvatars.jsx'
 import Terms                  from './pages/Terms.jsx'
 import Privacy                from './pages/Privacy.jsx'
 import NotFound               from './pages/NotFound.jsx'
@@ -66,6 +67,7 @@ export default function App() {
           >
             <Route index            element={<AdminIndex />}    />
             <Route path="settings"  element={<AdminSettings />} />
+            <Route path="avatars"   element={<AdminAvatars />}  />
           </Route>
           <Route path="/terms"   element={<Terms />}   />
           <Route path="/privacy" element={<Privacy />} />
