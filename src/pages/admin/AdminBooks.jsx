@@ -69,7 +69,7 @@ function blankForm(isbn13) {
 /**
  * Hydrate the form from a lookup result.
  *
- * @param {import('../../utils/bookLookup.js').BookLookupResult} hit
+ * @param {Object} hit  Normalized result from utils/bookLookup.lookupBookByIsbn (BookLookupResult).
  * @returns {Object}
  */
 function formFromLookup(hit) {
