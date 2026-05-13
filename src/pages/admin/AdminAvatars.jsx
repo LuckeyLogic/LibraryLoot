@@ -98,6 +98,19 @@ export default function AdminAvatars() {
   const [editingId,   setEditingId]   = useState(null)
   const [editingName, setEditingName] = useState('')
 
+  // Lightbox: which avatar (if any) is open at full size.
+  const [viewing, setViewing] = useState(null)
+
+  // ── Close lightbox on Escape ──
+  useEffect(() => {
+    if (!viewing) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setViewing(null)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [viewing])
+
   // ── Live subscription to the avatars collection ──
   // Sort newest-first client-side to avoid needing a composite index for
   // `orderBy('createdAt', 'desc')` until the pack grows large enough to
@@ -401,14 +414,20 @@ export default function AdminAvatars() {
           <div className={avatarStyles.grid}>
             {avatars.map((a) => (
               <article key={a.id} className={avatarStyles.tile}>
-                <div className={avatarStyles.tileSurface}>
+                <button
+                  type      ="button"
+                  className ={avatarStyles.tileSurface}
+                  onClick   ={() => setViewing(a)}
+                  aria-label={`View ${a.name} at full size`}
+                >
                   <img
                     src      ={a.downloadUrl}
                     alt      ={a.name}
                     className={avatarStyles.tileImage}
                     loading  ="lazy"
                   />
-                </div>
+                  <span className={avatarStyles.tileZoom} aria-hidden="true">⛶</span>
+                </button>
 
                 {editingId === a.id ? (
                   <input
@@ -450,6 +469,42 @@ export default function AdminAvatars() {
           </div>
         )}
       </section>
+
+      {/* ── LIGHTBOX ── */}
+      {viewing ? (
+        <div
+          className ={avatarStyles.lightbox}
+          onClick   ={() => setViewing(null)}
+          role      ="dialog"
+          aria-modal="true"
+          aria-label={`${viewing.name} — full size`}
+        >
+          <button
+            type      ="button"
+            className ={avatarStyles.lightboxClose}
+            onClick   ={(e) => { e.stopPropagation(); setViewing(null) }}
+            aria-label="Close"
+          >
+            ×
+          </button>
+          <div
+            className ={avatarStyles.lightboxInner}
+            onClick   ={(e) => e.stopPropagation()}
+          >
+            <div className={avatarStyles.lightboxSurface}>
+              <img
+                src      ={viewing.downloadUrl}
+                alt      ={viewing.name}
+                className={avatarStyles.lightboxImage}
+              />
+            </div>
+            <p className={avatarStyles.lightboxName}>{viewing.name}</p>
+            <p className={avatarStyles.lightboxHint}>
+              Click outside or press <kbd>Esc</kbd> to close.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
     </article>
   )
