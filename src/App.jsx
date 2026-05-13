@@ -16,6 +16,8 @@ import AdminLayout            from './components/AdminLayout.jsx'
 
 import Home                   from './pages/Home.jsx'
 import About                  from './pages/About.jsx'
+import Books                  from './pages/Books.jsx'
+import BookDetail             from './pages/BookDetail.jsx'
 import Donors                 from './pages/Donors.jsx'
 import Sponsor                from './pages/Sponsor.jsx'
 import Login                  from './pages/Login.jsx'
@@ -47,10 +49,12 @@ export default function App() {
 
       <main className={styles.appMain}>
         <Routes>
-          <Route path="/"        element={<Home />}    />
-          <Route path="/about"   element={<About />}   />
-          <Route path="/donors"  element={<Donors />}  />
-          <Route path="/sponsor" element={<Sponsor />} />
+          <Route path="/"            element={<Home />}       />
+          <Route path="/about"       element={<About />}      />
+          <Route path="/books"       element={<Books />}      />
+          <Route path="/books/:isbn" element={<BookDetail />} />
+          <Route path="/donors"      element={<Donors />}     />
+          <Route path="/sponsor"     element={<Sponsor />}    />
           <Route path="/login"   element={<Login />}   />
           <Route path="/signup"  element={<Signup />}  />
           <Route

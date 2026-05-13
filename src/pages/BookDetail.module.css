@@ -1,0 +1,245 @@
+/*  src/pages/BookDetail.module.css
+ */
+
+.wrap {
+  padding  : var(--space-xl) var(--space-lg);
+  max-width: 1100px;
+}
+
+.breadcrumb {
+  margin   : 0 0 var(--space-md);
+  font-size: var(--fs-small);
+}
+
+.breadcrumb a {
+  color      : var(--electric-blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skeleton {
+  color    : var(--hud-muted);
+  font-style: italic;
+}
+
+.error {
+  margin       : var(--space-md) 0;
+  padding      : var(--space-md);
+  background   : rgba(255, 0, 110, 0.12);
+  border       : 1px solid var(--magenta-pop);
+  color        : var(--hud-white);
+  border-radius: var(--radius-sm);
+  font-size    : var(--fs-small);
+}
+
+/* ── LAYOUT ── */
+.layout {
+  display              : grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap                  : var(--space-2xl);
+  align-items          : flex-start;
+  margin-bottom        : var(--space-xl);
+}
+
+@media (max-width: 720px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap                  : var(--space-lg);
+  }
+}
+
+/* ── COVER ── */
+.coverWrap {
+  position     : relative;
+  width        : 100%;
+  aspect-ratio : 2 / 3;
+  border-radius: var(--radius-lg);
+  overflow     : hidden;
+  border       : var(--border-epic);
+  background   : linear-gradient(140deg, var(--night-soft), var(--night-mid));
+  box-shadow   : 0 14px 40px rgba(0, 0, 0, 0.55), var(--shadow-glow);
+  display      : flex;
+  align-items    : center;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .coverWrap {
+    max-width: 240px;
+    margin   : 0 auto;
+  }
+}
+
+.coverImage {
+  width   : 100%;
+  height  : 100%;
+  object-fit: contain;
+}
+
+.coverFallback {
+  font-size: 5rem;
+  opacity  : 0.45;
+}
+
+/* ── BODY ── */
+.body {
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-md);
+}
+
+.title {
+  font-family : var(--font-display);
+  font-size   : clamp(1.75rem, 4vw, 2.5rem);
+  background  : linear-gradient(120deg, var(--loot-gold-bright), var(--neon-purple), var(--electric-blue));
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+  margin                 : 0;
+  line-height            : 1.15;
+}
+
+.authors {
+  margin    : 0;
+  font-family: var(--font-display);
+  font-size : 1.05rem;
+  color     : var(--electric-blue);
+}
+
+.factList {
+  list-style: none;
+  padding   : 0;
+  margin    : 0;
+  display   : flex;
+  flex-wrap : wrap;
+  gap       : var(--space-md);
+  color     : var(--hud-white);
+  font-size : var(--fs-small);
+}
+
+.factList li {
+  display    : inline-flex;
+  align-items: center;
+  gap        : 0.4rem;
+}
+
+.factLabel {
+  font-family    : var(--font-display);
+  font-size      : 0.7rem;
+  letter-spacing : 0.1em;
+  text-transform : uppercase;
+  color          : var(--hud-muted);
+}
+
+.isbn {
+  font-family : var(--font-mono);
+  font-size   : 0.85em;
+  padding     : 0.1rem 0.4rem;
+  background  : rgba(13, 10, 31, 0.7);
+  border      : 1px solid rgba(183, 175, 216, 0.3);
+  border-radius: 4px;
+  color       : var(--hud-cyan);
+}
+
+.inactiveTag {
+  font-family    : var(--font-display);
+  font-size      : 0.7rem;
+  letter-spacing : 0.08em;
+  text-transform : uppercase;
+  color          : var(--magenta-pop);
+  background     : rgba(255, 0, 110, 0.12);
+  border         : 1px solid var(--magenta-pop);
+  border-radius  : var(--radius-pill);
+  padding        : 0.15rem 0.6rem;
+}
+
+/* ── SUMMARY ── */
+.summarySection {
+  margin: var(--space-md) 0;
+}
+
+.summaryTitle {
+  font-family   : var(--font-display);
+  font-size     : 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color         : var(--loot-gold-bright);
+  margin        : 0 0 var(--space-sm);
+}
+
+.summary {
+  margin      : 0;
+  color       : var(--hud-white);
+  line-height : 1.7;
+  font-size   : 1rem;
+  white-space : pre-line;
+}
+
+/* ── CTA BLOCK ── */
+.ctaBlock {
+  margin-top: var(--space-lg);
+}
+
+.ctaCardSignedOut,
+.ctaCardSignedIn,
+.inactiveCard {
+  padding      : var(--space-lg) var(--space-xl);
+  border-radius: var(--radius-lg);
+  display      : flex;
+  flex-direction: column;
+  gap          : var(--space-sm);
+}
+
+.ctaCardSignedOut {
+  background : rgba(76, 201, 240, 0.10);
+  border     : var(--border-rare);
+}
+
+.ctaCardSignedIn {
+  background : rgba(255, 182, 39, 0.10);
+  border     : var(--border-legendary);
+  box-shadow : 0 0 24px rgba(255, 182, 39, 0.18);
+}
+
+.inactiveCard {
+  background : rgba(183, 175, 216, 0.10);
+  border     : 1px solid rgba(183, 175, 216, 0.4);
+}
+
+.ctaHeading {
+  margin     : 0;
+  font-family: var(--font-display);
+  font-size  : 1.15rem;
+  color      : var(--hud-white);
+}
+
+.ctaBody {
+  margin     : 0;
+  color      : var(--hud-white);
+  line-height: 1.6;
+}
+
+.ctaActions {
+  margin-top: var(--space-sm);
+  display   : flex;
+  flex-wrap : wrap;
+  gap       : var(--space-md);
+}
+
+/* ── NOT FOUND ── */
+.notFound {
+  margin       : var(--space-2xl) auto;
+  max-width    : 560px;
+  padding      : var(--space-xl);
+  text-align   : center;
+  border       : var(--border-epic);
+  border-radius: var(--radius-lg);
+  background   : rgba(26, 20, 56, 0.6);
+}
+
+.notFoundTitle {
+  font-family : var(--font-display);
+  font-size   : 2rem;
+  color       : var(--magenta-pop);
+  margin      : 0 0 var(--space-md);
+}

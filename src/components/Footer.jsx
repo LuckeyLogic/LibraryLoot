@@ -42,6 +42,7 @@ export default function Footer() {
         <nav className={styles.col} aria-label="Footer navigation">
           <p className={styles.colTitle}>Site</p>
           <Link to="/">Home</Link>
+          <Link to="/books">Books</Link>
           <Link to="/about">About the program</Link>
           <Link to="/for-parents">For Parents</Link>
           <Link to="/donors">Donors</Link>

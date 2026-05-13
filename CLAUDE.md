@@ -500,11 +500,16 @@ Broken into shippable sub-items so each is a clean PR.
 - Enforcement happens at challenge acceptance (ITEM 5). Today this commit only updates the doc shape spec, the FAQ entry, the For Parents copy, and the ITEM 5 plan below.
 - AdminBooks form still uses `readingLevel` only; the `minAge` / `maxAge` editor lands in a future tweak — non-blocking since ITEM 5 enforcement is what consumes them.
 
-#### [ ] ITEM 3c — Public book browse + per-book detail page
+#### [✅] ITEM 3c — Public book browse + per-book detail page
 
-- `/books` — public catalog grid, only `active: true` books
-- `/books/:isbn` — per-book detail (cover, summary, "Accept challenge" CTA gated on sign-in)
-- Home page surfaces a live count of active books with rewards
+- New `/books` page (`src/pages/Books.jsx` + `.module.css`) — anonymous-readable grid of `active: true` books. Sorted newest-added first. Empty state explains the librarian's still setting up the shelf; loading state shows a brief "loading the shelf…" line. Each tile links to `/books/:isbn`.
+- New `/books/:isbn` page (`src/pages/BookDetail.jsx` + `.module.css`) — public detail view. Full cover, title, authors, year, reading level, ISBN, summary. URL accepts hyphenated ISBNs (`normalizeIsbn` upstream of the lookup). Three CTA variants on the same page:
+  - **Inactive book** — surfaces a notice instead of the Accept block, but keeps the detail readable so a kid reading something the library has paused can still see it. Link back to /books.
+  - **Active book, signed-out visitor** — "Sign in to accept this challenge" with a `state={{ from: { pathname: '/books/:isbn' } }}` redirect so post-login returns here.
+  - **Active book, signed-in user** — "Coming soon" callout. Honest framing: real challenge acceptance lands in ITEM 5; this page doesn't promise more than the platform delivers today.
+- Navbar + Footer — added **Books** link between Home and About (Navbar) / right after Home (Footer).
+- The Home page's primary CTA "See the books" → `/books` was always pointed here; it now lands on a real page instead of NotFound.
+- Rules: ITEM 2c already deployed public read on `/{tenantId}/_main/books/{bookId}`, so no rule changes needed.
 
 ### [ ] ITEM 4 — Prize Management (Admin) + Donor Recognition + Sponsor Intake
 

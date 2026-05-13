@@ -17,6 +17,7 @@ import styles                 from './Navbar.module.css'
 
 const links = [
   { to: '/',             label: 'Home'        },
+  { to: '/books',        label: 'Books'       },
   { to: '/about',        label: 'About'       },
   { to: '/for-parents',  label: 'For Parents' },
   { to: '/donors',       label: 'Donors'      },
