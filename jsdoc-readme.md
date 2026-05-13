@@ -29,3 +29,9 @@ Auto-generated API reference for the Library Loot multi-tenant reading-rewards p
 - CSS variables only — never hardcode colors. Tokens live in `src/styles/tokens.css` and are shared between the React app and this docs site.
 - JSDoc on every component, exported function, model class, and utility.
 - Multi-tenant: every Firestore / Storage path routes through `src/firebase/tenant.js`. No hardcoded tenant IDs anywhere in app code.
+
+## Fortnite / V-Bucks usage
+
+Library Loot uses Fortnite-styled art and lists V-Bucks gift cards as one of the prize categories under Epic Games' [Fan Content Policy](https://www.epicgames.com/site/en-US/fan-art-policy). The platform is non-commercial — neither Luckey Logic, the libraries, nor any participant earns money from it. Library Loot is **not** affiliated with, endorsed, or sponsored by Epic Games.
+
+If you are contributing to this codebase or operating a tenant: stay inside the Fan Content Policy. No Epic Games logos, no Fortnite logos, no mocking of official Fortnite marketing layouts. Hero art and any Fortnite-styled visuals live in Firebase Storage with URLs in `siteContent.js` so swapping them out is one upload + one string change if Epic ever pushes back.

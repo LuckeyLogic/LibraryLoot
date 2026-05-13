@@ -43,6 +43,26 @@ export default function Terms() {
       </div>
 
       <section>
+        <h2>About this document</h2>
+        <p>
+          Library Loot is a platform that any library or community organization can
+          host for their community. This page is the <strong>base Terms of Service</strong>
+          {' '}— the platform-wide minimum that applies to every Library Loot
+          instance regardless of who operates it.
+        </p>
+        <p>
+          A specific library that operates a Library Loot instance may publish
+          additional tenant-specific terms. Where a tenant supplement and these
+          base terms overlap: the base controls for platform-wide topics
+          (account eligibility, prize-draw verifiability, the platform&apos;s
+          non-commercial stance); the supplement controls for tenant-specific
+          topics (operator identity, in-person pickup rules, local-law
+          obligations). A supplement may <em>add</em> commitments but cannot
+          <em> reduce</em> the protections in these base terms.
+        </p>
+      </section>
+
+      <section>
         <h2>1. The program</h2>
         <p>
           {brand.name} (the &ldquo;Service&rdquo;) is a community-funded reading

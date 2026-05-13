@@ -56,7 +56,38 @@
     });
   }
 
-  // ── 2 & 3. Source-page features (TOC + search) ────────────────────────────
+  // ── 2. Footer build info ──────────────────────────────────────────────────
+  // Runs on EVERY page (not just source pages). Replaces the placeholder
+  // build stamp with the live SHA + date written by
+  // scripts/write-docs-build-info.js, and appends a "Source on GitHub" link.
+  // Placed before the source-page early-return below so the homepage gets
+  // the same footer treatment.
+  if (window.LL_BUILD) {
+    var stamp = document.querySelector('.ll-build-stamp');
+    if (stamp) {
+      stamp.innerHTML =
+        'Build ' + window.LL_BUILD.buildDate + ' UTC · ' +
+        '<a href="' + window.LL_BUILD.repo + '/commit/' + window.LL_BUILD.sha + '" ' +
+        'target="_blank" rel="noopener">' + window.LL_BUILD.sha + '</a>' +
+        ' (' + window.LL_BUILD.branch + ')';
+    }
+    var footer = document.querySelector('.ll-footer');
+    if (footer && !footer.querySelector('.ll-footer-github')) {
+      var sep = document.createElement('span');
+      sep.className = 'll-footer-sep';
+      sep.textContent = '·';
+      var link = document.createElement('a');
+      link.className = 'll-footer-github';
+      link.href      = window.LL_BUILD.repo;
+      link.target    = '_blank';
+      link.rel       = 'noopener';
+      link.textContent = 'Source on GitHub';
+      footer.appendChild(sep);
+      footer.appendChild(link);
+    }
+  }
+
+  // ── 3 & 4. Source-page features (TOC + search) ────────────────────────────
   // These only run if we're on a source page (source.tmpl injects the search bar).
 
   var searchBar = document.getElementById('ll-source-search-bar');
@@ -197,34 +228,5 @@
     if (prevBtn) prevBtn.addEventListener('click', function () { goTo(current - 1); });
 
   }, 50); // 50ms — enough for prettify to finish even on large files
-
-  // ── 4. Footer build info ──────────────────────────────────────────────────
-  // Replaces the placeholder build stamp with the live SHA + date written
-  // by scripts/write-docs-build-info.js, and appends a "Source on GitHub"
-  // link pointing at the exact commit these docs were built from.
-  if (window.LL_BUILD) {
-    var stamp = document.querySelector('.ll-build-stamp');
-    if (stamp) {
-      stamp.innerHTML =
-        'Build ' + window.LL_BUILD.buildDate + ' UTC · ' +
-        '<a href="' + window.LL_BUILD.repo + '/commit/' + window.LL_BUILD.sha + '" ' +
-        'target="_blank" rel="noopener">' + window.LL_BUILD.sha + '</a>' +
-        ' (' + window.LL_BUILD.branch + ')';
-    }
-    var footer = document.querySelector('.ll-footer');
-    if (footer && !footer.querySelector('.ll-footer-github')) {
-      var sep = document.createElement('span');
-      sep.className = 'll-footer-sep';
-      sep.textContent = '·';
-      var link = document.createElement('a');
-      link.className = 'll-footer-github';
-      link.href      = window.LL_BUILD.repo;
-      link.target    = '_blank';
-      link.rel       = 'noopener';
-      link.textContent = 'Source on GitHub';
-      footer.appendChild(sep);
-      footer.appendChild(link);
-    }
-  }
 
 }());

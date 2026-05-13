@@ -42,6 +42,26 @@ export default function Privacy() {
       </div>
 
       <section>
+        <h2>About this document</h2>
+        <p>
+          Library Loot is a platform that any library or community organization can
+          host for their community. This page is the <strong>base Privacy Policy</strong>
+          {' '}— the platform-wide minimum that applies to every Library Loot
+          instance regardless of who operates it.
+        </p>
+        <p>
+          A specific library that operates a Library Loot instance may publish
+          additional tenant-specific terms (their contact, their data-retention
+          practices, etc.). Where a tenant supplement and this base policy overlap:
+          the base controls for platform-wide topics (COPPA, what we collect, who
+          processes the data); the supplement controls for tenant-specific topics
+          (who the operator is, how prizes are physically distributed). A
+          supplement may <em>add</em> protections but cannot <em>lower</em> the
+          protections in this base policy.
+        </p>
+      </section>
+
+      <section>
         <h2>1. What we collect</h2>
         <p>From adults (parents, guardians, sponsors, librarians):</p>
         <ul>

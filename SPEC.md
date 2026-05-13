@@ -375,6 +375,8 @@ Library Loot collects information about minors (likely under 13). COPPA applies.
 
 ## 7. Legal disclaimers
 
+### 7.1 Epic Games disclaimer
+
 The canonical disclaimer string lives at `siteContent.legal.epicGamesDisclaimer`:
 
 > "Fortnite and V-Bucks are trademarks of Epic Games, Inc. This program is not affiliated with or endorsed by Epic Games."
@@ -389,6 +391,48 @@ It appears in:
 - The `LICENSE` file (trailing trademark notice section).
 
 If Epic ever requests removal of any Fortnite-styled visual or reference, Luckey Logic complies immediately and updates the hero asset + any affected copy via a `siteContent.js` change + Storage upload.
+
+### 7.2 Two-layer Terms / Privacy: base + tenant supplement
+
+Library Loot ships a **base** Privacy Policy and Terms of Service that apply to every instance regardless of who operates it. Individual tenants can OPTIONALLY publish a **supplement** that adds tenant-specific terms (the library's own contact, jurisdiction, in-person pickup rules, local data-retention practices, etc.). Both layers render on the same page; the precedence rules are explicit.
+
+#### Where supplements live
+
+```js
+// /{tenantId}/_main.legal
+{
+  privacyPolicySupplement: '<markdown>',   // optional, edited via admin panel
+  privacyPolicySupplementUpdatedAt: Timestamp | null,
+  termsSupplement:         '<markdown>',
+  termsSupplementUpdatedAt: Timestamp | null
+}
+```
+
+ITEM 2e exposes a textarea per supplement in the admin Settings panel. Empty / unset = no supplement appears.
+
+#### Precedence rules (the actual contract)
+
+Render order on each legal page:
+
+1. **Base policy** (the current Privacy / Terms text — same on every tenant).
+2. **Tenant supplement** (if present), in a clearly-labeled section: "Additional terms from \<organization name\>".
+3. Footer trademark + COPPA contact, both pulled from the tenant's `_main.support`.
+
+Conflict resolution, stated verbatim in the base policy:
+
+> **The base policy and any tenant supplement together form this agreement. Where they overlap:
+> - The **base** policy controls for platform-wide topics: COPPA, the categories of information collected, the third-party service providers (Firebase, Open Library, Gemini), the prize-draw verifiability mechanism, and the open-source codebase.
+> - The **supplement** controls for tenant-specific topics: who the operator is, how prizes are physically distributed at that library, the operator's contact information, and any local-law obligations the operator is subject to.
+> - A supplement may **add** protections but cannot **lower** the protections in the base policy. Conflicts that try to lower base-policy protections (e.g., a supplement trying to allow advertising or third-party data sharing the base forbids) resolve in favor of the base.**
+
+This protects users (the base floor cannot be eroded), gives tenants real autonomy (the supplement covers the topics they actually own), and gives Luckey Logic a clean answer when asked "whose terms apply?" — both, with this precedence.
+
+#### Admin UI (ITEM 2e)
+
+- Markdown editor for each supplement.
+- "Save" updates the supplement + its `updatedAt` timestamp.
+- Preview pane shows the rendered base + supplement so the admin sees exactly what users see.
+- Plain-language note above the editor: "Adding terms here adds to Library Loot's base policy — it can't replace it."
 
 ---
 
