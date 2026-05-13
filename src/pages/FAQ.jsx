@@ -128,10 +128,12 @@ export default function FAQ() {
           {' '}<a href={`mailto:${support.programContactEmail}`}>{support.programContactEmail}</a>.
         </p>
         <p className="muted">
-          For an overview of the program, see <Link to="/about">About</Link>.
-          For privacy specifics see <Link to="/privacy">Privacy Policy</Link>.
-          The source code lives at
-          {' '}<a href={siteContent.footer.sourceUrl} target="_blank" rel="noreferrer">
+          For an overview of the program, see <Link to="/about">About</Link>. If
+          you&apos;re a parent or guardian thinking about signing your kid up,
+          the <Link to="/for-parents">For Parents guide</Link> walks the whole
+          flow step by step. For privacy specifics see
+          {' '}<Link to="/privacy">Privacy Policy</Link>. The source code lives
+          at <a href={siteContent.footer.sourceUrl} target="_blank" rel="noreferrer">
             github.com/LuckeyLogic/LibraryLoot
           </a>.
         </p>

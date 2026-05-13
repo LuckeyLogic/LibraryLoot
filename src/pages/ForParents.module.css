@@ -1,0 +1,153 @@
+/*  src/pages/ForParents.module.css
+ */
+
+.wrap {
+  padding  : var(--space-2xl) var(--space-lg);
+  max-width: 880px;
+}
+
+.header {
+  margin-bottom: var(--space-xl);
+}
+
+.eyebrow {
+  font-family    : var(--font-display);
+  font-size      : 0.9rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--loot-gold-bright);
+  margin         : 0 0 var(--space-sm);
+}
+
+.title {
+  font-family : var(--font-display);
+  font-size   : var(--fs-h1);
+  background  : linear-gradient(120deg, var(--loot-gold-bright), var(--neon-purple), var(--electric-blue));
+  -webkit-background-clip: text;
+  background-clip        : text;
+  color                  : transparent;
+  margin                 : 0 0 var(--space-md);
+}
+
+.lede {
+  color    : var(--hud-muted);
+  font-size: 1.15rem;
+  margin   : 0;
+  max-width: 62ch;
+}
+
+/* ── TL;DR ── */
+.tldr {
+  margin        : var(--space-xl) 0;
+  padding       : var(--space-lg) var(--space-xl);
+  background    : linear-gradient(135deg, rgba(157, 78, 221, 0.15), rgba(76, 201, 240, 0.10));
+  border        : var(--border-epic);
+  border-radius : var(--radius-lg);
+  box-shadow    : var(--shadow-glow);
+}
+
+.tldrTitle {
+  font-family    : var(--font-display);
+  font-size      : 1.05rem;
+  letter-spacing : 0.05em;
+  text-transform : uppercase;
+  color          : var(--electric-blue);
+  margin         : 0 0 var(--space-md);
+}
+
+.tldrList {
+  list-style    : none;
+  padding       : 0;
+  margin        : 0;
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-sm);
+}
+
+.tldrList li {
+  position     : relative;
+  padding-left : 1.4rem;
+  color        : var(--hud-white);
+  line-height  : 1.55;
+}
+
+.tldrList li::before {
+  content    : '⚡';
+  position   : absolute;
+  left       : 0;
+  top        : 0;
+  color      : var(--loot-gold-bright);
+  font-size  : 0.95em;
+}
+
+/* ── SECTIONS ── */
+.section {
+  margin-bottom : var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom : 1px solid rgba(157, 78, 221, 0.18);
+}
+
+.section:last-of-type {
+  border-bottom: none;
+}
+
+.section h2 {
+  font-family : var(--font-display);
+  font-size   : 1.4rem;
+  color       : var(--hud-white);
+  margin      : 0 0 var(--space-sm);
+}
+
+.stepNum {
+  font-family    : var(--font-display);
+  font-size      : 0.75rem;
+  letter-spacing : 0.2em;
+  text-transform : uppercase;
+  color          : var(--electric-blue);
+  margin         : 0 0 var(--space-xs);
+}
+
+.section p {
+  color      : var(--hud-white);
+  line-height: 1.65;
+  margin     : 0 0 var(--space-md);
+}
+
+.section ul {
+  color      : var(--hud-white);
+  padding-left: 1.4rem;
+  margin     : 0 0 var(--space-md);
+  line-height: 1.6;
+}
+
+.section ul li {
+  margin-bottom: var(--space-sm);
+}
+
+.section a {
+  color      : var(--electric-blue);
+  font-weight: 600;
+}
+
+/* ── CALLOUTS ── */
+.callout {
+  margin       : var(--space-md) 0;
+  padding      : var(--space-md) var(--space-lg);
+  background   : rgba(255, 182, 39, 0.08);
+  border-left  : 4px solid var(--loot-gold-bright);
+  border-radius: var(--radius-sm);
+}
+
+.callout p {
+  margin: 0;
+  color : var(--hud-white);
+}
+
+/* ── CONTACT BLOCK ── */
+.contactBlock {
+  margin       : var(--space-md) 0;
+  padding      : var(--space-md);
+  background   : rgba(157, 78, 221, 0.12);
+  border-left  : 3px solid var(--neon-purple);
+  border-radius: var(--radius-sm);
+}

@@ -25,6 +25,7 @@ import AdminIndex             from './pages/admin/AdminIndex.jsx'
 import AdminSettings          from './pages/admin/AdminSettings.jsx'
 import AdminAvatars           from './pages/admin/AdminAvatars.jsx'
 import FAQ                    from './pages/FAQ.jsx'
+import ForParents             from './pages/ForParents.jsx'
 import Terms                  from './pages/Terms.jsx'
 import Privacy                from './pages/Privacy.jsx'
 import NotFound               from './pages/NotFound.jsx'
@@ -70,8 +71,9 @@ export default function App() {
             <Route path="settings"  element={<AdminSettings />} />
             <Route path="avatars"   element={<AdminAvatars />}  />
           </Route>
-          <Route path="/faq"     element={<FAQ />}     />
-          <Route path="/terms"   element={<Terms />}   />
+          <Route path="/faq"          element={<FAQ />}        />
+          <Route path="/for-parents"  element={<ForParents />} />
+          <Route path="/terms"        element={<Terms />}      />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="*"        element={<NotFound />} />
         </Routes>

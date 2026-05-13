@@ -16,10 +16,11 @@ import siteContent            from '../data/siteContent.js'
 import styles                 from './Navbar.module.css'
 
 const links = [
-  { to: '/',        label: 'Home'    },
-  { to: '/about',   label: 'About'   },
-  { to: '/donors',  label: 'Donors'  },
-  { to: '/faq',     label: 'FAQ'     }
+  { to: '/',             label: 'Home'        },
+  { to: '/about',        label: 'About'       },
+  { to: '/for-parents',  label: 'For Parents' },
+  { to: '/donors',       label: 'Donors'      },
+  { to: '/faq',          label: 'FAQ'         }
 ]
 
 /**

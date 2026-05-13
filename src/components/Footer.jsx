@@ -43,6 +43,7 @@ export default function Footer() {
           <p className={styles.colTitle}>Site</p>
           <Link to="/">Home</Link>
           <Link to="/about">About the program</Link>
+          <Link to="/for-parents">For Parents</Link>
           <Link to="/donors">Donors</Link>
           <Link to="/faq">FAQ</Link>
         </nav>

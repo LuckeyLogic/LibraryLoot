@@ -429,6 +429,13 @@ Broken into shippable sub-items so each is a clean PR.
 - Firestore Rules — added `/{tenantId}/_main/avatars/{avatarId}`: public read (so the picker can render the grid without auth), admin write. Deployed.
 - AdminLayout sidebar — Avatars link gates correctly on `isAdmin`.
 
+#### [✅] ITEM 2j — Parents & Guardians guide
+
+- New `/for-parents` route (`src/pages/ForParents.jsx`). Narrative walkthrough of the parent's actual workflow: make an account → add a kid as a sub-profile → get the kid verified in-person at the library → pick a book → kid reads + quizzes → librarian/parent approval → verifiable prize draw → physical pickup at the library. Covers the standard parent concerns up front: data collection, safety, anti-cheat, what happens if Epic withdraws, how to delete a child profile.
+- TL;DR block at top with ⚡-bulleted highlights so a scanner-reader gets the shape in 30 seconds; full numbered steps for the careful reader; gold-bordered callouts for the "why so little data" and "why no written reports" explanations.
+- Tenant-specific operator contact via `useTenantSettings` so a library hosting their own instance sees their own contact at the bottom of the page.
+- Cross-linked from Navbar (primary nav between About and Donors), Footer, and the FAQ tail block.
+
 #### [✅] ITEM 2i — Cease-and-desist contingency plan + public FAQ
 
 - **SPEC.md §11 — Contingency plan: Fortnite branding withdrawal.** Operational playbook covering: trigger scenarios (Epic C&D, counsel advice, voluntary rebrand), the critical invariant that existing V-Bucks gift cards stay distributable (Fan Content Policy restricts BRANDING, not commercial gift-card distribution), operator action checklist with target paths to change, what does NOT change (name, palette, font, data model), communication template to parent accounts, multi-tenant coordination, audit-trail discipline. Renumbered the existing roadmap section to §12.
