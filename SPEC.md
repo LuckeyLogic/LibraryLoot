@@ -129,9 +129,15 @@ Each library (or community org) is a **tenant** with its own isolated data root.
   isbn13        : string,
   title         : string,
   authors       : string[],
-  coverUrl      : string | null,     // External URL (Open Library / Google Books).
-                                     //   v1 references directly; future versions may
-                                     //   cache to Storage at /{tenant}/books/{id}/cover.{ext}
+  coverUrl         : string | null,  // URL the UI renders. Either an external URL
+                                     //   (Open Library, Google Books, anywhere) OR a
+                                     //   Firebase Storage download URL when the admin
+                                     //   uploaded their own — both are valid.
+  coverStoragePath : string | null,  // When non-null: the Storage path
+                                     //   `/{tenant}/books/{isbn13}/cover.jpg`. Tracking
+                                     //   this lets admin replace / clear / delete the
+                                     //   book and have us remove the Storage object so
+                                     //   nothing orphans. Null when coverUrl is external.
   publishedYear : number | null,
   readingLevel  : 'EarlyReader' | 'Grade3-5' | 'MiddleGrade' | 'YA' | null,
                                      //   Coarse-grained bucket for at-a-glance filtering.

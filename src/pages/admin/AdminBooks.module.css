@@ -102,7 +102,7 @@
 
 .editorBody {
   display              : grid;
-  grid-template-columns: 180px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   gap                  : var(--space-xl);
   align-items          : flex-start;
 }
@@ -111,6 +111,20 @@
   .editorBody {
     grid-template-columns: 1fr;
     gap                  : var(--space-lg);
+  }
+}
+
+.coverColumn {
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-sm);
+}
+
+@media (max-width: 640px) {
+  .coverColumn {
+    max-width: 240px;
+    margin   : 0 auto;
+    width    : 100%;
   }
 }
 
@@ -127,13 +141,6 @@
   justify-content: center;
 }
 
-@media (max-width: 640px) {
-  .coverPreview {
-    max-width   : 200px;
-    margin      : 0 auto;
-  }
-}
-
 .coverImage {
   width   : 100%;
   height  : 100%;
@@ -143,6 +150,77 @@
 .coverFallback {
   font-size: 4rem;
   opacity  : 0.4;
+}
+
+.pendingTag {
+  position    : absolute;
+  bottom      : 6px;
+  left        : 6px;
+  right       : 6px;
+  font-family : var(--font-display);
+  font-size   : 0.65rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align  : center;
+  color       : var(--night);
+  background  : linear-gradient(135deg, var(--loot-gold-bright), var(--loot-gold));
+  padding     : 0.25rem 0.4rem;
+  border-radius: 4px;
+  overflow    : hidden;
+  text-overflow: ellipsis;
+  white-space : nowrap;
+}
+
+.coverActions {
+  display    : flex;
+  flex-wrap  : wrap;
+  align-items: center;
+  gap        : var(--space-xs);
+}
+
+/* Hide the native file input — the styled label acts as the button. */
+.coverFileInput {
+  position : absolute;
+  width    : 1px;
+  height   : 1px;
+  opacity  : 0;
+  overflow : hidden;
+  pointer-events: none;
+}
+
+.coverUploadBtn {
+  cursor    : pointer;
+  flex      : 1 1 auto;
+  text-align: center;
+}
+
+.coverClearBtn {
+  font-family   : var(--font-display);
+  font-size     : 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color         : var(--hud-muted);
+  background    : transparent;
+  border        : 1px solid rgba(183, 175, 216, 0.3);
+  border-radius : var(--radius-sm);
+  padding       : 0.35rem 0.6rem;
+  cursor        : pointer;
+  touch-action  : manipulation;
+}
+
+@media (hover: hover) {
+  .coverClearBtn:hover {
+    color       : var(--magenta-pop);
+    border-color: var(--magenta-pop);
+    background  : rgba(255, 0, 110, 0.08);
+  }
+}
+
+.coverHelp {
+  margin   : 0;
+  font-size: 0.75rem;
+  color    : var(--hud-muted);
+  line-height: 1.5;
 }
 
 .editorFields {

@@ -25,17 +25,30 @@ import {
   updateDoc
 }                                              from 'firebase/firestore'
 
+import {
+  deleteObject,
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytes
+}                                              from 'firebase/storage'
+
 import { useAuth }                             from '../../context/AuthContext.jsx'
 
 import IsbnScanner                             from '../../components/IsbnScanner.jsx'
 
+import { storage }                             from '../../firebase'
 import {
   tenantCollection,
-  tenantDoc
+  tenantDoc,
+  tenantStoragePath
 }                                              from '../../firebase/tenant.js'
 
 import { isValidIsbn, normalizeIsbn }          from '../../utils/isbn.js'
 import { lookupBookByIsbn }                    from '../../utils/bookLookup.js'
+import {
+  formatBytes,
+  optimizeImage
+}                                              from '../../utils/imageOptimize.js'
 
 import styles                                  from './Admin.module.css'
 import bookStyles                              from './AdminBooks.module.css'
@@ -57,14 +70,17 @@ const READING_LEVELS = [
  */
 function blankForm(isbn13) {
   return {
-    isbn13       : isbn13 || '',
-    title        : '',
-    authors      : '',          // comma-separated input; split on save
-    publishedYear: '',
-    coverUrl     : '',
-    summary      : '',
-    readingLevel : '',
-    source       : 'manual'
+    isbn13                : isbn13 || '',
+    title                 : '',
+    authors               : '',          // comma-separated input; split on save
+    publishedYear         : '',
+    coverUrl              : '',
+    coverStoragePath      : null,
+    pendingCoverFile      : null,        // File staged for upload on save
+    pendingCoverPreviewUrl: null,        // URL.createObjectURL for in-form preview
+    summary               : '',
+    readingLevel          : '',
+    source                : 'manual'
   }
 }
 
@@ -76,14 +92,17 @@ function blankForm(isbn13) {
  */
 function formFromLookup(hit) {
   return {
-    isbn13       : hit.isbn13,
-    title        : hit.title || '',
-    authors      : (hit.authors || []).join(', '),
-    publishedYear: hit.publishedYear ? String(hit.publishedYear) : '',
-    coverUrl     : hit.coverUrl || '',
-    summary      : hit.summary || '',
-    readingLevel : '',
-    source       : hit.source
+    isbn13                : hit.isbn13,
+    title                 : hit.title || '',
+    authors               : (hit.authors || []).join(', '),
+    publishedYear         : hit.publishedYear ? String(hit.publishedYear) : '',
+    coverUrl              : hit.coverUrl || '',
+    coverStoragePath      : null,        // API-sourced; not in Storage
+    pendingCoverFile      : null,
+    pendingCoverPreviewUrl: null,
+    summary               : hit.summary || '',
+    readingLevel          : '',
+    source                : hit.source
   }
 }
 
@@ -199,14 +218,17 @@ export default function AdminBooks() {
   const handleEdit = (book) => {
     setEditingId(book.id)
     setForm({
-      isbn13       : book.isbn13 || '',
-      title        : book.title || '',
-      authors      : (book.authors || []).join(', '),
-      publishedYear: book.publishedYear ? String(book.publishedYear) : '',
-      coverUrl     : book.coverUrl || '',
-      summary      : book.summary || '',
-      readingLevel : book.readingLevel || '',
-      source       : book.source || 'manual'
+      isbn13                : book.isbn13 || '',
+      title                 : book.title || '',
+      authors               : (book.authors || []).join(', '),
+      publishedYear         : book.publishedYear ? String(book.publishedYear) : '',
+      coverUrl              : book.coverUrl || '',
+      coverStoragePath      : book.coverStoragePath || null,
+      pendingCoverFile      : null,
+      pendingCoverPreviewUrl: null,
+      summary               : book.summary || '',
+      readingLevel          : book.readingLevel || '',
+      source                : book.source || 'manual'
     })
     setSaveError(null)
     // Scroll to top so the editor is visible.
@@ -214,10 +236,56 @@ export default function AdminBooks() {
   }
 
   const handleFormFieldChange = (field) => (event) => {
-    setForm((prev) => ({ ...prev, [field]: event.target.value }))
+    setForm((prev) => {
+      const next = { ...prev, [field]: event.target.value }
+      // If the user types into the Cover URL field while there's a
+      // staged file upload, they're abandoning the upload in favor of
+      // the typed URL — drop the staged file + revoke its preview URL.
+      if (field === 'coverUrl' && prev.pendingCoverFile) {
+        if (prev.pendingCoverPreviewUrl) URL.revokeObjectURL(prev.pendingCoverPreviewUrl)
+        next.pendingCoverFile       = null
+        next.pendingCoverPreviewUrl = null
+      }
+      return next
+    })
+  }
+
+  // File picker → stage the file + generate a local preview URL. The
+  // actual Storage upload happens on form save, so cancelling never
+  // leaves an orphan object in the bucket.
+  const handleCoverFile = (event) => {
+    const file = event.target.files && event.target.files[0]
+    if (!file) return
+    setForm((prev) => {
+      if (prev.pendingCoverPreviewUrl) URL.revokeObjectURL(prev.pendingCoverPreviewUrl)
+      return {
+        ...prev,
+        pendingCoverFile      : file,
+        pendingCoverPreviewUrl: URL.createObjectURL(file)
+      }
+    })
+    // Reset the input so picking the same file again still fires onChange.
+    event.target.value = ''
+  }
+
+  const handleClearCover = () => {
+    setForm((prev) => {
+      if (prev.pendingCoverPreviewUrl) URL.revokeObjectURL(prev.pendingCoverPreviewUrl)
+      return {
+        ...prev,
+        coverUrl              : '',
+        // Keep coverStoragePath as-is — handleSave deletes the Storage
+        // object when the saved cover no longer references it.
+        pendingCoverFile      : null,
+        pendingCoverPreviewUrl: null
+      }
+    })
   }
 
   const closeForm = () => {
+    if (form && form.pendingCoverPreviewUrl) {
+      URL.revokeObjectURL(form.pendingCoverPreviewUrl)
+    }
     setForm(null)
     setEditingId(null)
     setSaveError(null)
@@ -244,19 +312,70 @@ export default function AdminBooks() {
       .map((s) => s.trim())
       .filter(Boolean)
     const publishedYear = form.publishedYear ? Number(form.publishedYear) : null
-    const cleanCover    = (form.coverUrl || '').trim() || null
     const summary       = (form.summary || '').trim()
     const readingLevel  = form.readingLevel || null
 
     setSaving(true)
     try {
+      // ── Cover commit logic ──────────────────────────────────────────
+      // Three possible end states:
+      //   (a) staged file present → upload, set new url + storagePath,
+      //       delete previous Storage object if any
+      //   (b) form.coverUrl points at an external URL while a previous
+      //       Storage object existed → delete the Storage object
+      //   (c) coverUrl is empty (user cleared) while a previous Storage
+      //       object existed → delete the Storage object
+      //   default: keep coverUrl + coverStoragePath as-is
+      let coverUrl         = (form.coverUrl || '').trim() || null
+      let coverStoragePath = form.coverStoragePath || null
+
+      if (form.pendingCoverFile) {
+        // (a) Upload to Storage at the deterministic per-book path.
+        const { blob } = await optimizeImage(form.pendingCoverFile, {
+          maxDimension: 600,
+          quality     : 0.85,
+          type        : 'image/jpeg'
+        })
+        const newPath  = tenantStoragePath('books', isbn13, 'cover.jpg')
+        const newRef   = storageRef(storage, newPath)
+        await uploadBytes(newRef, blob, {
+          contentType : 'image/jpeg',
+          cacheControl: 'public, max-age=3600'
+        })
+        const newUrl = await getDownloadURL(newRef)
+
+        // If a previous Storage object lives at a DIFFERENT path, delete
+        // it. Same-path uploads overwrite — no separate delete needed.
+        if (coverStoragePath && coverStoragePath !== newPath) {
+          try { await deleteObject(storageRef(storage, coverStoragePath)) }
+          catch (_) { /* OK if already gone */ }
+        }
+
+        coverUrl         = newUrl
+        coverStoragePath = newPath
+      } else if (coverStoragePath) {
+        // No new upload — but did the user swap to an external URL or
+        // clear the field? Detect by URL containing the Storage object's
+        // path-encoded segment.
+        const looksLikeStorage =
+          coverUrl && coverUrl.includes(encodeURIComponent(coverStoragePath))
+        if (!looksLikeStorage) {
+          // (b) or (c) — release the old Storage object.
+          try { await deleteObject(storageRef(storage, coverStoragePath)) }
+          catch (_) { /* OK if already gone */ }
+          coverStoragePath = null
+        }
+      }
+
+      // ── Firestore write ─────────────────────────────────────────────
       if (editingId) {
         await updateDoc(tenantDoc('books', editingId), {
           isbn13,
           title        : cleanTitle,
           authors      : authorsList,
           publishedYear,
-          coverUrl     : cleanCover,
+          coverUrl,
+          coverStoragePath,
           summary,
           readingLevel,
           source       : form.source || 'manual',
@@ -272,7 +391,8 @@ export default function AdminBooks() {
           title        : cleanTitle,
           authors      : authorsList,
           publishedYear,
-          coverUrl     : cleanCover,
+          coverUrl,
+          coverStoragePath,
           summary,
           readingLevel,
           source       : form.source || 'manual',
@@ -312,6 +432,14 @@ export default function AdminBooks() {
     )
     if (!ok) return
     try {
+      // Best-effort: clean up the Storage cover BEFORE the Firestore
+      // doc disappears. If the Storage delete fails we still remove
+      // the doc — an orphan object in Storage is recoverable; an
+      // orphan Firestore doc isn't.
+      if (book.coverStoragePath) {
+        try { await deleteObject(storageRef(storage, book.coverStoragePath)) }
+        catch (_) { /* OK if already gone or rules block */ }
+      }
       await deleteDoc(tenantDoc('books', book.id))
     } catch (err) {
       window.alert(`Couldn’t delete: ${err.message || err}`)
@@ -389,13 +517,15 @@ export default function AdminBooks() {
       {/* ── REVIEW / EDIT FORM ── */}
       {form ? (
         <BookForm
-          form        ={form}
-          isEdit      ={Boolean(editingId)}
-          onFieldChange={handleFormFieldChange}
-          onSave      ={handleSave}
-          onCancel    ={closeForm}
-          saving      ={saving}
-          error       ={saveError}
+          form          ={form}
+          isEdit        ={Boolean(editingId)}
+          onFieldChange ={handleFormFieldChange}
+          onCoverFile   ={handleCoverFile}
+          onClearCover  ={handleClearCover}
+          onSave        ={handleSave}
+          onCancel      ={closeForm}
+          saving        ={saving}
+          error         ={saveError}
         />
       ) : null}
 
@@ -444,7 +574,26 @@ export default function AdminBooks() {
  * @param   {Object}   props
  * @returns {JSX.Element}
  */
-function BookForm({ form, isEdit, onFieldChange, onSave, onCancel, saving, error }) {
+function BookForm({
+  form,
+  isEdit,
+  onFieldChange,
+  onCoverFile,
+  onClearCover,
+  onSave,
+  onCancel,
+  saving,
+  error
+}) {
+  // What to show in the preview pane: a locally-generated preview for
+  // a staged file (highest priority — they haven't saved yet) or the
+  // committed coverUrl, or the bookicon fallback.
+  const previewSrc = form.pendingCoverPreviewUrl || form.coverUrl || null
+  const hasAnyCover =
+    Boolean(form.pendingCoverFile) ||
+    Boolean((form.coverUrl || '').trim()) ||
+    Boolean(form.coverStoragePath)
+
   return (
     <form className={bookStyles.editorCard} onSubmit={onSave}>
 
@@ -462,17 +611,58 @@ function BookForm({ form, isEdit, onFieldChange, onSave, onCancel, saving, error
       </header>
 
       <div className={bookStyles.editorBody}>
-        <div className={bookStyles.coverPreview}>
-          {form.coverUrl ? (
-            <img
-              src      ={form.coverUrl}
-              alt      ="Book cover preview"
-              className={bookStyles.coverImage}
-              loading  ="lazy"
+        <div className={bookStyles.coverColumn}>
+          <div className={bookStyles.coverPreview}>
+            {previewSrc ? (
+              <img
+                src      ={previewSrc}
+                alt      ="Book cover preview"
+                className={bookStyles.coverImage}
+                loading  ="lazy"
+              />
+            ) : (
+              <span className={bookStyles.coverFallback}>📖</span>
+            )}
+            {form.pendingCoverFile ? (
+              <span className={bookStyles.pendingTag} title={form.pendingCoverFile.name}>
+                Pending upload · {formatBytes(form.pendingCoverFile.size)}
+              </span>
+            ) : null}
+          </div>
+
+          {/* Cover actions — upload or clear. Hidden file input + label-as-button. */}
+          <div className={bookStyles.coverActions}>
+            <input
+              id        ="book-cover-file"
+              type      ="file"
+              accept    ="image/png, image/jpeg, image/webp"
+              onChange  ={onCoverFile}
+              className ={bookStyles.coverFileInput}
+              disabled  ={saving}
             />
-          ) : (
-            <span className={bookStyles.coverFallback}>📖</span>
-          )}
+            <label
+              htmlFor   ="book-cover-file"
+              className ={`btn btn-secondary ${bookStyles.coverUploadBtn}`}
+              aria-disabled={saving}
+            >
+              {hasAnyCover ? 'Replace cover…' : 'Upload your own…'}
+            </label>
+            {hasAnyCover ? (
+              <button
+                type      ="button"
+                onClick   ={onClearCover}
+                className ={bookStyles.coverClearBtn}
+                disabled  ={saving}
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <p className={bookStyles.coverHelp}>
+            Use the URL field below for an external cover image, or upload your own
+            here. Uploaded covers are stored in Firebase and clean themselves up
+            when you replace or delete the book.
+          </p>
         </div>
 
         <div className={bookStyles.editorFields}>

@@ -483,6 +483,7 @@ Broken into shippable sub-items so each is a clean PR.
   ```
 - `firestore.rules` — added `/{tenantId}/_main/books/{bookId}` block: public read (the catalog is publicly browseable on /books when ITEM 3c lands; the home page also reads it), admin write. Deployed to `library-loot`.
 - `AdminLayout` sidebar — added "Books" nav entry between Settings and Avatars.
+- **Cover image upload (follow-up):** when the API doesn't return a usable cover URL (or it's wrong), admins can upload their own. File stages in form state until save; `optimizeImage` resizes to 600px-max JPG before upload; uploaded to deterministic per-book path `/{tenant}/books/{isbn13}/cover.jpg`; download URL goes into `coverUrl`, the Storage path goes into a new `coverStoragePath` field on the book doc so we know to clean it up. Replace, clear, AND delete all release the Storage object when the book had one (best-effort `deleteObject`). External URLs continue to work — coverStoragePath stays null in that case. See SPEC.md §3.1 for the schema fields.
 
 #### [✅] ITEM 3b — Camera-based ISBN barcode scanner
 
