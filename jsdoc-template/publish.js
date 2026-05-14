@@ -670,12 +670,23 @@ exports.publish = (taffyData, opts, tutorials) => {
 
     // Pre-register source-file links BEFORE buildNav so linkto() can
     // resolve "pages/Home.jsx" → "pages_Home.jsx.html" while we're
-    // building the sidebar. generateSourceFiles re-registers below;
-    // registerLink is idempotent so the second pass is harmless.
+    // building the sidebar.
+    //
+    // Critical: do NOT call helper.getUniqueFilename here. That function
+    // claims the filename slot in JSDoc's "issued names" tracker, and
+    // generateSourceFiles below calls getUniqueFilename a second time —
+    // which collides and falls back to "pages_Home.jsx_.html". Nav links
+    // would then point at a filename that never gets written. Instead,
+    // compute the same deterministic name getUniqueFilename produces on
+    // first issue ("/" → "_", append ".html") and registerLink directly.
+    // generateSourceFiles' getUniqueFilename call then issues the exact
+    // same name uncontested.
     if (outputSourceFiles) {
         Object.keys(sourceFiles).forEach(file => {
-            const sourceOutfile = helper.getUniqueFilename(sourceFiles[file].shortened);
-            helper.registerLink(sourceFiles[file].shortened, sourceOutfile);
+            const shortened = sourceFiles[file].shortened;
+            const sourceOutfile = shortened.replace(/[\\\/]/g, '_')
+                                           .replace(/[^$a-zA-Z0-9._\-]/g, '_') + '.html';
+            helper.registerLink(shortened, sourceOutfile);
         });
     }
 
