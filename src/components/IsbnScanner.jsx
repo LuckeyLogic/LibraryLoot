@@ -24,6 +24,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader }            from '@zxing/browser'
 
+import useLockBodyScroll                        from '../hooks/useLockBodyScroll.js'
+
 import { isValidIsbn, normalizeIsbn }          from '../utils/isbn.js'
 
 import styles                                  from './IsbnScanner.module.css'
@@ -47,6 +49,10 @@ export default function IsbnScanner({ onScan, onClose }) {
   const [status,    setStatus]    = useState('starting')   // 'starting' | 'scanning' | 'found' | 'denied' | 'error'
   const [statusMsg, setStatusMsg] = useState('Starting camera…')
   const [lastSeen,  setLastSeen]  = useState(null)         // shown when a barcode was scanned but rejected as non-ISBN
+
+  // Lock background page scroll while the camera overlay is up so a stray
+  // swipe doesn't scroll the admin page behind the viewfinder.
+  useLockBodyScroll()
 
   // Close on Escape.
   useEffect(() => {

@@ -111,6 +111,14 @@ export default function AdminAvatars() {
     return () => document.removeEventListener('keydown', onKey)
   }, [viewing])
 
+  // ── Lock background scroll while the lightbox is open ──
+  useEffect(() => {
+    if (!viewing) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previous }
+  }, [viewing])
+
   // ── Live subscription to the avatars collection ──
   // Sort newest-first client-side to avoid needing a composite index for
   // `orderBy('createdAt', 'desc')` until the pack grows large enough to
