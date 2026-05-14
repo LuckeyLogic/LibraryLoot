@@ -43,6 +43,56 @@ Then visit https://library-loot.web.app/admin/setup, sign in with the account yo
 
 ---
 
+## `check-user.js` — Inspect a Firebase Auth user
+
+Read-only. Looks up a user by email or UID and prints their auth record, custom claims (`admin`, `tenant`), and (if a tenant is supplied) the per-tenant user profile doc at `/{tenantId}/_main/users/{uid}`. Useful for confirming claims after sign-up, debugging a "why doesn't this user see admin?" report, or seeing what role / display name / avatar a parent is wired up with.
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json \
+  node check-user.js <emailOrUid> [tenantId]
+```
+
+- `<emailOrUid>` — required. Accepts either the user's email address or the Firebase Auth UID.
+- `[tenantId]` — optional. If omitted, claims are still printed but the per-tenant profile lookup is skipped.
+
+---
+
+## `backfill-user-claims.js` — Backfill `tenant` claim on existing users
+
+One-shot maintenance script for the rare case where rules / Cloud Function changes leave already-signed-up users without the `tenant` custom claim. Scans Firebase Auth, finds users missing the claim, and sets it to the supplied tenant (default `luckey-logic`). Idempotent — re-running on an already-fixed user is a no-op.
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json \
+  node backfill-user-claims.js [tenantId]
+```
+
+- `[tenantId]` — optional. Defaults to `luckey-logic`.
+
+After it runs, affected users must sign out and back in for the new claim to appear in their ID token.
+
+---
+
+## `check-hygiene.js` — Audit Firestore docs vs. Storage objects
+
+Read-only. Compares Firestore docs to Storage objects under a tenant root and flags orphans in either direction:
+
+- Storage files with no matching Firestore doc (orphan files left behind after a delete went wrong).
+- Firestore docs pointing at a `storagePath` / `coverStoragePath` that no longer exists in the bucket (dangling refs).
+- Docs that have a Storage-hosted `downloadUrl` / `coverUrl` but no `storagePath` field set — meaning a future delete would silently leak the file.
+
+Also checks tenant settings (`_main.support` populated?) and surfaces expired-but-not-cleaned-up `/_setup_tokens` entries. Run it after any bulk cover-upload / avatar-import session, or any time you suspect Storage has drifted from Firestore.
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json \
+  node check-hygiene.js [tenantId]
+```
+
+- `[tenantId]` — optional. Defaults to `luckey-logic`.
+
+Exits 0 always (so it can be piped or wrapped); the issue count is printed in the final summary line.
+
+---
+
 ## Coming in later items
 
 - `export-tenant.js` — dump a tenant's Firestore root + Storage prefix into a portable bundle (ITEM 8).

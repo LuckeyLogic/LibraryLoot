@@ -19,7 +19,7 @@ Adults (parents, grandparents, neighbors, local businesses) sponsor a specific b
 - **Multi-tenant from day one.** Each library gets its own isolated data root in Firestore + Firebase Storage. When a library wants their own instance, a migration script moves their root out — no shared data, no lingering coupling.
 - **Built to be handed off.** Every architectural decision favors making it easy for a library or partner org to take operational ownership without ever needing Firebase Console access.
 
-## Where the project stands (2026-05-13)
+## Where the project stands (2026-05-14)
 
 | Status | Item |
 |---|---|
@@ -35,11 +35,15 @@ Adults (parents, grandparents, neighbors, local businesses) sponsor a specific b
 | ✅ | ITEM 2h — Docs auto-build + deploy at `/docs/` |
 | ✅ | ITEM 2i — Cease-and-desist contingency plan + public FAQ |
 | ✅ | ITEM 2j — Parents & Guardians guide at `/for-parents` |
-| ⏳ | ITEM 3 — Book management (ISBN scan + Open Library API) |
+| ✅ | ITEM 3a — Admin book CRUD + Open Library / Google Books lookup |
+| ✅ | ITEM 3b — Camera ISBN barcode scanner (`@zxing/browser`) |
+| ✅ | ITEM 3c — Public `/books` catalog + `/books/:isbn` detail pages |
+| ✅ | Cover image upload — admin can upload custom covers when API returns nothing; Storage cleanup on replace / clear / delete |
+| ⏳ | **ITEM 9 — Admin AI assistant** (Llama / Loot — name TBD; helps with sponsor onboarding, cover-finding, navigation; tool-calling Gemini) |
 | ⏳ | ITEM 4 — Prize management + sponsor branding + Sponsor intake form |
-| ⏳ | ITEM 5 — Challenge lifecycle + AI-assisted quiz authoring |
+| ⏳ | ITEM 5 — Challenge lifecycle + AI-assisted quiz authoring (HonestyPledge already built) |
 | ⏳ | ITEM 6 — Verifiable random prize draw (drand → random.org → crypto entropy chain) |
-| ⏳ | ITEM 7 — Public browse + printable display-table cards |
+| ⏳ | ITEM 7 — Public browse refinements + printable display-table cards |
 | ⏳ | ITEM 8 — Handoff scripts (export / import / setup playbook) |
 
 See [SPEC.md](./SPEC.md) for the canonical data model, prize-selection algorithm, COPPA approach, legal disclaimers, and handoff procedure. See [CLAUDE.md](./CLAUDE.md) for the project guide used by anyone (human or AI) working on this code.
@@ -53,7 +57,7 @@ See [SPEC.md](./SPEC.md) for the canonical data model, prize-selection algorithm
 | Database | Cloud Firestore — multi-tenant, deny-by-default rules |
 | File Storage | Firebase Storage — public-read on the assets prefix, admin-write |
 | Backend | Firebase Cloud Functions (Node 22, 2nd gen, `us-central1`) — HTTPS callables for tenant provisioning, setup-token claims, and (future) prize draws |
-| AI | Firebase AI Logic / Vertex AI — Gemini 2.0 Flash (quiz authoring, ITEM 5) |
+| AI | Firebase AI Logic / Vertex AI — Gemini 2.5 Flash (admin assistant ITEM 9; quiz authoring ITEM 5). Gemini 2.0 Flash shuts down 2026-06-01 — pinning planning docs to 2.5 |
 | Random entropy | drand (League of Entropy) → random.org → `crypto.randomBytes` fallback (ITEM 6) |
 | Hosting | Firebase Hosting — single site, React app at `/`, docs at `/docs/` |
 | CI/CD | GitHub Actions → live + PR preview channels |
@@ -85,11 +89,21 @@ Local-only scripts for tenant provisioning, user backfill, and inspection. Each 
 ```bash
 cd scripts && npm install   # one-time
 
+# Provision a new tenant + issue a one-time setup token for its first admin
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa-key.json \
   node seed-tenant.js <tenantId> [contactEmail] [tenantName]
 
+# Inspect a Firebase Auth user — claims, role, profile
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa-key.json \
   node check-user.js <emailOrUid> [tenantId]
+
+# Backfill tenant claim on pre-bootstrap users (run once after rule changes)
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa-key.json \
+  node backfill-user-claims.js [tenantId]
+
+# Compare Storage objects to Firestore docs; flag orphans / dangling refs
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa-key.json \
+  node check-hygiene.js [tenantId]
 ```
 
 ## Multi-tenant model

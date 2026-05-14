@@ -4,17 +4,19 @@
 
 Auto-generated API reference for the Library Loot multi-tenant reading-rewards platform. Browse components, pages, context providers, models, and utilities using the **Contents** panel on the right. Type into the filter to narrow the list. Use the in-file text search on a source page to jump between matches.
 
-> This documentation is generated locally with `npm run docs`. The output (`docs/`) is gitignored — regenerate at any time and the contents stay in sync with the current `main` branch.
+> This site auto-builds on every push to `main` and deploys to [library-loot.web.app/docs/](https://library-loot.web.app/docs/) alongside the app (ITEM 2h). To preview locally, run `npm run docs` — the output (`docs/`) is gitignored.
 
 ## Quick Links
 
 | Area | Lives in | What's in it |
 |------|----------|--------------|
-| Pages | `src/pages/` | Top-level route pages rendered by React Router — Home, About, Donors, Sponsor, Login, Signup, AdminSetup, Terms, Privacy, NotFound |
-| Components | `src/components/` | Shared UI — Navbar, Footer, Disclaimer, PrivateRoute, AdminRoute |
+| Public pages | `src/pages/` | Home, About, Donors, Sponsor, Books, BookDetail, FAQ, ForParents, Account, Login, Signup, AdminSetup, Terms, Privacy, NotFound |
+| Admin pages | `src/pages/admin/` | AdminIndex (overview), AdminSettings, AdminBooks (CRUD + ISBN scanner + cover upload), AdminAvatars (avatar pack manager + lightbox) |
+| Components | `src/components/` | Navbar, Footer, Disclaimer, PrivateRoute, AdminRoute, AdminLayout, AvatarPicker, ChildCard, ChildForm, HonestyPledge, IsbnScanner |
+| Hooks | `src/hooks/` | `useTenantSettings` (live `_main` settings reader), `useLockBodyScroll` (modal/overlay scroll lock) |
 | Context | `src/context/` | `AuthContext` / `useAuth` — auth state, sign-in helpers, custom-claim reads |
 | Firebase | `src/firebase.js`, `src/firebase/tenant.js` | Firebase client init and the single-source-of-truth tenant root helper |
-| Site content | `src/data/siteContent.js` | All user-facing copy, brand info, fallback support contact |
+| Site content | `src/data/siteContent.js` | Brand info, fallback support contact, base legal copy (live tenant overrides come from `_main.support` / `_main.legal`) |
 
 ## Where things live
 
