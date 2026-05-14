@@ -353,20 +353,22 @@ function linktoExternal(longName, name) {
  * @param {array<object>} members.interfaces
  * @return {string} The HTML for the navigation sidebar.
  */
-function buildNav(members) {
+// Directory-prefix groups used by both the @module nav (when files
+// declare @module) AND the source-file fallback nav below. Keep in one
+// place so the labels stay consistent.
+const DIR_GROUPS = [
+    { prefix: 'components/', label: 'Components' },
+    { prefix: 'pages/',      label: 'Pages'       },
+    { prefix: 'context/',    label: 'Context'     },
+    { prefix: 'hooks/',      label: 'Hooks'       },
+    { prefix: 'model/',      label: 'Models'      },
+    { prefix: 'utils/',      label: 'Utilities'   },
+    { prefix: 'data/',       label: 'Data'        },
+];
+
+function buildNav(members, sourceFiles) {
     let nav = '<h2><a href="index.html">Home</a></h2>';
     const seen = {};
-
-    // Group modules by their directory prefix (e.g. "components/Navbar" → Components)
-    const DIR_GROUPS = [
-        { prefix: 'components/', label: 'Components' },
-        { prefix: 'pages/',      label: 'Pages'       },
-        { prefix: 'context/',    label: 'Context'     },
-        { prefix: 'hooks/',      label: 'Hooks'       },
-        { prefix: 'model/',      label: 'Models'      },
-        { prefix: 'utils/',      label: 'Utilities'   },
-        { prefix: 'data/',       label: 'Data'        },
-    ];
 
     const buckets = {};
     DIR_GROUPS.forEach(g => { buckets[g.prefix] = []; });
@@ -382,6 +384,8 @@ function buildNav(members) {
         }
     });
 
+    const renderedLabels = new Set();
+
     DIR_GROUPS.forEach(({ prefix, label }) => {
         const mods = buckets[prefix];
         if (!mods.length) return;
@@ -395,15 +399,63 @@ function buildNav(members) {
             })
             .join('');
         nav += `<h3>${label}</h3><ul>${items}</ul>`;
+        renderedLabels.add(label);
     });
 
     // Anything not matched by a prefix group
     if (ungrouped.length) {
         nav += buildMemberNav(ungrouped, 'Other', seen, linkto);
+        renderedLabels.add('Other');
     }
 
     // Classes (model classes show up here)
     nav += buildMemberNav(members.classes, 'Classes', seen, linkto);
+
+    // ── SOURCE-FILE FALLBACK NAV ─────────────────────────────────────
+    // None of our source files currently use @module tags (default-
+    // exported React components don't fit JSDoc's standard categories),
+    // so members.modules is empty and the sections above produce nothing.
+    // Emit per-directory groups of source-file links so the sidebar has
+    // actual content. If we later add @module tags, those sections render
+    // above this block and we skip any label we've already rendered to
+    // avoid duplicates.
+    if (sourceFiles) {
+        const sourceBuckets = {};
+        DIR_GROUPS.forEach(g => { sourceBuckets[g.prefix] = []; });
+        const sourceUngrouped = [];
+
+        Object.keys(sourceFiles).forEach(file => {
+            const shortened = sourceFiles[file].shortened;  // e.g. "pages/Home.jsx"
+            const group = DIR_GROUPS.find(g => shortened.startsWith(g.prefix));
+            if (group) {
+                sourceBuckets[group.prefix].push(shortened);
+            } else {
+                sourceUngrouped.push(shortened);
+            }
+        });
+
+        DIR_GROUPS.forEach(({ prefix, label }) => {
+            if (renderedLabels.has(label)) return;
+            const files = sourceBuckets[prefix];
+            if (!files.length) return;
+            const items = files
+                .sort((a, b) => a.localeCompare(b))
+                .map(shortened => {
+                    const display = shortened.replace(/^[^/]+\//, '');
+                    return `<li>${linkto(shortened, display)}</li>`;
+                })
+                .join('');
+            nav += `<h3>${label}</h3><ul>${items}</ul>`;
+        });
+
+        if (sourceUngrouped.length && !renderedLabels.has('Other')) {
+            const items = sourceUngrouped
+                .sort((a, b) => a.localeCompare(b))
+                .map(shortened => `<li>${linkto(shortened, shortened)}</li>`)
+                .join('');
+            nav += `<h3>Other</h3><ul>${items}</ul>`;
+        }
+    }
 
     return nav;
 }
@@ -616,8 +668,19 @@ exports.publish = (taffyData, opts, tutorials) => {
     view.htmlsafe = htmlsafe;
     view.outputSourceFiles = outputSourceFiles;
 
+    // Pre-register source-file links BEFORE buildNav so linkto() can
+    // resolve "pages/Home.jsx" → "pages_Home.jsx.html" while we're
+    // building the sidebar. generateSourceFiles re-registers below;
+    // registerLink is idempotent so the second pass is harmless.
+    if (outputSourceFiles) {
+        Object.keys(sourceFiles).forEach(file => {
+            const sourceOutfile = helper.getUniqueFilename(sourceFiles[file].shortened);
+            helper.registerLink(sourceFiles[file].shortened, sourceOutfile);
+        });
+    }
+
     // once for all
-    view.nav = buildNav(members);
+    view.nav = buildNav(members, outputSourceFiles ? sourceFiles : null);
     attachModuleSymbols( find({ longname: {left: 'module:'} }), members.modules );
 
     // generate the pretty-printed source files first so other pages can link to them

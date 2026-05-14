@@ -2,7 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!--
+      user-scalable=no: this is a dev-reference docs site; pinch-zoom on mobile
+      is intentionally disabled per Miguel's call (2026-05-14). Future v2 idea:
+      a font-size toggle in the UI for accessibility instead of relying on
+      browser zoom. Images inside content still zoom via their own UI.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>Library Loot — <?js= title ?></title>
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">

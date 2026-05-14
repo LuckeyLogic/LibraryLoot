@@ -233,11 +233,29 @@ body {
 
     .ll-logo { width: 38px; height: 38px; }
 
-    .page-title { font-size: 1.4rem; }
+    .page-title { font-size: 1.15rem; letter-spacing: 0.02em; }
 
     pre.prettyprint { font-size: 0.72rem; }
 
     .ll-source-search { flex-wrap: wrap; gap: 4px; }
+
+    /* Tables in the README / quick-link blocks can push the page past
+       viewport-width because cells hold word-like tokens (file paths,
+       function names) that browsers don't break at default. Let them
+       wrap anywhere on phone widths. */
+    td, th {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        padding: 6px 8px;
+        font-size: 0.82rem;
+    }
+
+    /* The .ll-nav-toggle button on mobile already says "CONTENTS" —
+       hide the duplicate heading inside the panel so it doesn't appear
+       twice when the panel is expanded. */
+    .ll-nav-inner .ll-nav-heading {
+        display: none;
+    }
 }
 
 .ll-nav-inner {
@@ -311,6 +329,12 @@ nav ul a:hover {
     padding-bottom: 16px;
     border-bottom: 1px solid var(--gold-border);
     margin-bottom: 28px;
+    /* Bungee is very wide — long titles like "Library Loot — Developer
+       Reference" need to be allowed to break mid-word on narrow viewports
+       or they push the page past `width=device-width` and trigger iOS
+       Safari's shrink-to-fit zoom. */
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 /* ── HEADINGS ───────────────────────────────────────────────────────────────── */
@@ -319,6 +343,9 @@ h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 600;
     line-height: 1.2;
+    /* Same reasoning as .page-title — chunky display font + long compound
+       headings can overflow on phones. Allow mid-word breaking. */
+    overflow-wrap: anywhere;
 }
 
 h2 {

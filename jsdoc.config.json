@@ -7,6 +7,7 @@
       "src/data",
       "src/firebase.js",
       "src/firebase",
+      "src/hooks",
       "src/App.jsx",
       "src/main.jsx"
     ],
