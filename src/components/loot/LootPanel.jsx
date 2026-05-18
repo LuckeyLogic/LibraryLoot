@@ -82,6 +82,45 @@ export default function LootPanel({ onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  // Mobile-only body-scroll lock. On desktop the panel is a corner
+  // overlay and we want the admin page underneath to stay scrollable.
+  // On mobile the panel goes fullscreen, so background scroll should
+  // be frozen — without this, dragging on a chat message bleeds
+  // through to the admin page underneath.
+  //
+  // `document.body.style.overflow = 'hidden'` alone is NOT enough on
+  // iOS Safari — Safari ignores body overflow lock once a touch-drag
+  // gesture starts. The robust pattern: snapshot scrollY, then apply
+  // position:fixed + negative top + width:100% to body, which fully
+  // freezes the page. On cleanup, restore the styles AND scroll back
+  // to where the user was so closing LOOT doesn't jump them to the
+  // top of the admin page.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const isMobile = window.matchMedia('(max-width: 600px)').matches
+    if (!isMobile) return
+
+    const scrollY = window.scrollY
+    const prev    = {
+      position: document.body.style.position,
+      top     : document.body.style.top,
+      width   : document.body.style.width,
+      overflow: document.body.style.overflow
+    }
+    document.body.style.position = 'fixed'
+    document.body.style.top      = `-${scrollY}px`
+    document.body.style.width    = '100%'
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.position = prev.position
+      document.body.style.top      = prev.top
+      document.body.style.width    = prev.width
+      document.body.style.overflow = prev.overflow
+      window.scrollTo(0, scrollY)
+    }
+  }, [])
+
   // ── HANDLERS ────────────────────────────────────────────────────
   async function handleSend() {
     const text = draft.trim()
@@ -133,6 +172,19 @@ export default function LootPanel({ onClose }) {
     : 'Hey — what are we looting today?'
 
   return (
+    <>
+
+      {/* Mobile-only blurred backdrop. Hidden on desktop via CSS.
+          Clicking/tapping it closes the panel — standard modal UX.
+          Visually softens the admin page behind LOOT on phones so the
+          panel feels like its own surface rather than just a fullscreen
+          overlay floating on top of busy content. */}
+      <div
+        className   ={styles.backdrop}
+        onClick     ={onClose}
+        aria-hidden ="true"
+      />
+
     <aside className={styles.panel} aria-label="LOOT assistant">
 
       <header className={styles.header}>
@@ -222,5 +274,7 @@ export default function LootPanel({ onClose }) {
       </form>
 
     </aside>
+
+    </>
   )
 }

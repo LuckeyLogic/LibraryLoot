@@ -1,5 +1,31 @@
 /* src/components/loot/LootPanel.module.css */
 
+/* Mobile-only blurred backdrop. Sits between the page (z-index < 94)
+   and the LootPanel (z-index 95). Hidden on desktop because the panel
+   is a corner overlay there — backdrop would obscure the admin page
+   you're trying to glance at while chatting. */
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .backdrop {
+    display              : block;
+    position             : fixed;
+    inset                : 0;
+    z-index              : 94;
+    background           : rgba(13, 10, 31, 0.55);
+    backdrop-filter      : blur(8px) saturate(140%);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    animation            : llLootBackdropIn 0.18s ease-out;
+  }
+}
+
+@keyframes llLootBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 .panel {
   position        : fixed;
   bottom          : 24px;
@@ -107,6 +133,12 @@
   gap             : 10px;
   scrollbar-width : thin;
   scrollbar-color : var(--neon-purple-deep) transparent;
+  /* Defense-in-depth: even with body-scroll locked, prevent touch-drag
+     bleed-through when the user scrolls past the top/bottom of the
+     message list. `contain` stops the scroll chain from propagating
+     to the body (which on iOS Safari can re-engage even with the
+     position:fixed lock under some gesture conditions). */
+  overscroll-behavior: contain;
 }
 
 .scroller::-webkit-scrollbar       { width: 8px; }
@@ -218,5 +250,13 @@
     max-height   : 100%;
     border       : none;
     border-radius: 0;
+  }
+
+  /* iOS Safari auto-zooms when a form input's font-size is below 16px.
+     Our desktop input is 0.9rem (≈14px), which triggers the zoom on
+     first focus and leaves the page slightly zoomed-in until manually
+     pinched out. Force 16px on mobile to dodge that behavior. */
+  .input {
+    font-size: 16px;
   }
 }
