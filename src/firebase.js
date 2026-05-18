@@ -22,6 +22,8 @@ import { getFirestore }  from 'firebase/firestore'
 import { getStorage }    from 'firebase/storage'
 import { getFunctions }  from 'firebase/functions'
 
+import { initAppCheck }  from './firebase/appCheck.js'
+
 /**
  * Firebase Web App config — live values from the Firebase Console
  * (Project Settings → Your apps → Web app → Firebase SDK snippet).
@@ -37,6 +39,16 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
+
+// App Check MUST be initialized AFTER `initializeApp` and BEFORE the
+// service getters below. Reason: each service getter provisions a
+// network client bound to the app's current App Check state. If App
+// Check is set up later, the service clients stay App-Check-less for
+// the lifetime of the page and never attach tokens to requests.
+// `initAppCheck` lives in ./firebase/appCheck.js as a pure function
+// (no top-level side effects, no import from this file) so we can call
+// it from here without a circular dep.
+export const appCheck  = initAppCheck(app)
 
 export const auth      = getAuth(app)
 export const db        = getFirestore(app)

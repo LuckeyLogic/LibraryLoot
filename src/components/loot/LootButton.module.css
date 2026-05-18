@@ -1,0 +1,64 @@
+/* src/components/loot/LootButton.module.css */
+
+.fab {
+  position        : fixed;
+  bottom          : 24px;
+  right           : 24px;
+  z-index         : 90;
+  display         : flex;
+  align-items     : center;
+  gap             : 8px;
+  padding         : 12px 18px 12px 14px;
+  background      : linear-gradient(135deg, var(--loot-gold-bright), var(--loot-gold));
+  color           : var(--night);
+  border          : none;
+  border-radius   : var(--radius-pill, 999px);
+  font-family     : var(--font-display);
+  font-size       : 0.82rem;
+  letter-spacing  : 0.18em;
+  text-transform  : uppercase;
+  font-weight     : 600;
+  cursor          : pointer;
+  box-shadow      : 0 8px 24px rgba(0, 0, 0, 0.45),
+                    0 0 18px rgba(255, 182, 39, 0.35);
+  transition      : transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+  touch-action    : manipulation;
+}
+
+@media (hover: hover) {
+  .fab:hover {
+    transform : translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5),
+                0 0 26px rgba(255, 209, 102, 0.55);
+  }
+}
+
+.fab:active { transform: translateY(0); }
+
+.fab:focus-visible {
+  outline       : 2px solid var(--electric-blue);
+  outline-offset: 3px;
+}
+
+.fabHidden {
+  opacity       : 0;
+  pointer-events: none;
+  transform     : translateY(8px) scale(0.96);
+}
+
+.glyph {
+  font-size  : 1rem;
+  line-height: 1;
+  filter     : drop-shadow(0 0 4px rgba(255, 0, 110, 0.6));
+}
+
+.label { line-height: 1; }
+
+@media (max-width: 600px) {
+  .fab {
+    bottom    : 16px;
+    right     : 16px;
+    padding   : 10px 16px 10px 12px;
+    font-size : 0.75rem;
+  }
+}

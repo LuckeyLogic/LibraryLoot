@@ -12,24 +12,24 @@
     "url": "https://github.com/LuckeyLogic/LibraryLoot.git"
   },
   "scripts": {
-    "dev":              "vite",
-    "build":            "vite build",
-    "preview":          "vite preview",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "docs:sync-tokens": "cp src/styles/tokens.css jsdoc-template/static/styles/tokens.css",
-    "docs:build-info":  "node scripts/write-docs-build-info.js",
-    "docs":             "npm run docs:sync-tokens && npm run docs:build-info && jsdoc -c jsdoc.config.json",
-    "build:all":        "npm run build && npm run docs && rm -rf dist/docs && cp -r docs dist/docs"
+    "docs:build-info": "node scripts/write-docs-build-info.js",
+    "docs": "npm run docs:sync-tokens && npm run docs:build-info && jsdoc -c jsdoc.config.json",
+    "build:all": "npm run build && npm run docs && rm -rf dist/docs && cp -r docs dist/docs"
   },
   "dependencies": {
-    "@zxing/browser":   "^0.2.0",
-    "firebase":         "^10.14.0",
-    "react":            "^18.3.1",
-    "react-dom":        "^18.3.1",
+    "@zxing/browser": "^0.2.0",
+    "firebase": "^12.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
-    "jsdoc":                "^4.0.4",
-    "vite":                 "^5.4.11"
+    "jsdoc": "^4.0.4",
+    "vite": "^5.4.11"
   }
 }

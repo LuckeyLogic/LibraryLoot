@@ -512,15 +512,95 @@ Broken into shippable sub-items so each is a clean PR.
 - The Home page's primary CTA "See the books" → `/books` was always pointed here; it now lands on a real page instead of NotFound.
 - Rules: ITEM 2c already deployed public read on `/{tenantId}/_main/books/{bookId}`, so no rule changes needed.
 
-### [ ] ITEM 4 — Prize Management (Admin) + Donor Recognition + Sponsor Intake
+### ITEM 9 — LOOT (Admin AI Assistant) + Sponsor Flow (sliced)
 
-- `/{tenant}/_main/prizes/{prizeId}` — kind (Fortnite-only enum v1), label, qtyAvailable, active, donorId
-- `/{tenant}/_main/sponsors/{sponsorId}` — name, type (individual|business), logoPath, website, message, anonymous
-- `/{tenant}/_main/sponsorInquiries/{id}` — name, email, donation description, status (new|contacted|received|closed)
-- **Replace the `/sponsor` placeholder page with a real intake form** that writes to `sponsorInquiries`. The form does NOT take payment — sponsors describe what they're dropping off and how to contact them
-- Sponsor logo upload → Firebase Storage at `/{tenant}/sponsors/{sponsorId}/logo.{ext}`
-- Public Donors page surfacing sponsor recognition (from `sponsors` collection)
-- Admin dashboard: review `sponsorInquiries`, convert an inquiry into a `sponsors` + `prizes` record once the prize is physically received at the library
+The sponsor pieces from the original ITEM 4 are absorbed into 9d/9e because Miguel wants AI helping with sponsor intake from day one. ITEM 4 shrinks to the residual prize-inventory bits below.
+
+#### [✅] ITEM 9a — Operator setup
+
+- Vertex AI API enabled in Google Cloud (`aiplatform.googleapis.com`, labeled "Agent Platform API" in the new console UI).
+- Firebase AI Logic enabled. Both backends (Gemini Developer API + Vertex AI Gemini API) are enabled at the project level; we use **Vertex AI** in client code.
+- AI Monitoring enabled, 100% sampling rate during dev.
+- App Check enabled with reCAPTCHA Enterprise. Library Loot Web App registered, enforcement ON.
+  - Site key (public, in client code): `6LeSUPAsAAAAAPotOzNECOIVpXsxgDtj7hvYNsGl`.
+  - Debug token for Miguel's iMac registered in Firebase Console → App Check → Apps → Manage debug tokens. Lives in `.env.local` as `VITE_APPCHECK_DEBUG_TOKEN` (gitignored).
+- Decision lock-in: stuck with classic reCAPTCHA v3 key terminology in Firebase's UI even though the provider is Enterprise (the registration UI uses "secret key" wording loosely — Enterprise's actual auth happens via the project's IAM, not the v3 secret. Working setup is the source of truth.)
+
+#### [✅] ITEM 9b — LOOT chat shell (admin only, no tools)
+
+- Bumped `firebase` SDK from `^10.14.0` to `^12.13.0` so the canonical `firebase/ai` namespace is available (v10 only had `firebase/vertexai-preview`). All existing services (auth, firestore, storage, functions, app-check) remain API-stable for our usage.
+- New `src/firebase/appCheck.js` — initializes App Check with `ReCaptchaEnterpriseProvider`. Wires `self.FIREBASE_APPCHECK_DEBUG_TOKEN` from `.env.local` BEFORE `initializeAppCheck()` runs, only when `import.meta.env.DEV` is true. Production never sees the debug token.
+- `src/firebase.js` — side-effect imports `./firebase/appCheck.js` at the bottom (after default export) so every consumer transparently picks up App Check.
+- New `src/lib/loot/lootClient.js` — wraps Firebase AI Logic SDK. Vertex AI backend, **Gemini 2.5 Flash** model (2.0 Flash + Flash-Lite shut down 2026-06-01, do not pin to those). System prompt: LOOT identity + audience (librarian/admin) + tone (Fortnite-vibe, kid-program-appropriate) + boundaries (Library-Loot-only topics). Exports a single `chatWithLoot(history)` function.
+- New `src/components/loot/`:
+  - `LootButton.jsx` — floating bottom-right launcher. State (`open`/`closed`) persists in `sessionStorage` under `ll_loot_open_v1`.
+  - `LootPanel.jsx` — chat surface. 380×600 on desktop, fullscreen on mobile. Header shows name + model + Clear + Close. Conversation history persists in `sessionStorage` under `ll_loot_history_v1`. Esc closes. Enter sends, Shift+Enter newline. Greets by first name if signed-in user has `displayName`.
+  - `LootMessage.jsx` — message bubble. User = purple gradient right; LOOT = night-soft left with cyan thinking-dots while pending.
+- `src/components/AdminLayout.jsx` — mounts `<LootButton />` at layout root. Available on every `/admin/*` route, never on public pages.
+- Vibe lock-in: LOOT is a proper noun (no acronym). Header references "loot drop" / "what are we looting today" — keeps it on-brand without forcing an awkward initialism.
+
+#### [ ] ITEM 9c — First tools wired (admin assistant gains hands)
+
+- Tool: `lookupBookByIsbn(isbn)` — reuses `src/utils/bookLookup.js`. Returns normalized book metadata.
+- Tool: `searchBooksByTitle(title)` — reuses Open Library/Google Books title search.
+- LOOT can now answer "Is _Steam Train Dream Train_ in our catalog?" with a real lookup. System prompt updated: drop the "tools are coming in the next build" hedge once they're live.
+
+#### [ ] ITEM 9d — Public sponsor intake form (no AI on the public side)
+
+- Replace the `/sponsor` placeholder page with a real intake form.
+- Fields: name, email, business name (optional), website (optional), donation description (required textarea), anonymous toggle, message (optional). **Plus optional book suggestion:** title (free text) + optional ISBN (validated against `utils/isbn.js`, supports the camera scanner).
+- Writes to `/{tenant}/_main/sponsorInquiries/{id}` with shape per SPEC.md (extend to include `suggestedBookTitle`, `suggestedBookIsbn`, `suggestedBookResolved`).
+- Firestore rules: `create` allowed for anyone (anonymous public form); `read/update/delete` admin-only.
+- **No AI in the public form** — App Check + public Gemini calls would blow our cost budget. AI helps the admin AFTER inquiries land.
+
+#### [ ] ITEM 9e — Admin sponsor-inquiries review + LOOT tools for it
+
+- New `/admin/sponsors` page. List view with status chips (`new` → `contacted` → `received` → `closed`), sort by date. Detail view: full inquiry, status state machine, admin notes textarea.
+- New LOOT tools wired for this flow:
+  - `addBookToCatalog(isbn)` — if the sponsor suggested a book not in our catalog, LOOT can add it.
+  - `draftReplyEmail(inquiryId, tone)` — drafts a reply email. Admin copies/sends manually for v1; no SendGrid yet.
+  - `flagReadingLevelMismatch(suggestedBookId)` — quick "does this book fit the kid age range of an open challenge?" check.
+- "Open in LOOT" button on inquiry detail loads the inquiry context as a system message in LOOT's chat.
+
+#### [ ] ITEM 9f — LOOT for authenticated parents (`/account`)
+
+- Same `LootButton`/`LootPanel`, mounted in `Account.jsx` (or a parent-layout wrapper).
+- Different system prompt: parent-facing tone, knows about the kid sub-profiles, can answer "How do I add a kid?" / "Why is my kid not verified yet?" / etc.
+- No rate-limiting yet — authenticated parents are a trusted audience.
+
+#### [ ] ITEM 9g — Public LOOT (anon visitors, sponsor-onboarding focus)
+
+- LOOT available on public pages. Primary purpose: help would-be sponsors understand the program, then route them to the intake form.
+- **Rate limit + token gate** — match MCL-Central's pattern. (When we get here, read `/Users/miguelbrown/LuckeyLogic/Programming/WebBasedProjects/mcl-central` for the exact implementation.)
+  - 15 questions per anonymous session.
+  - At question 10, LOOT softly warns about the cap.
+  - Sponsor inquiry form submission auto-issues a token (Firestore doc with TTL + remaining-question budget) that lifts the cap for a set period.
+- Cost protection: anonymous Gemini calls go through a Cloud Function intermediary (NOT direct from the browser) so we can enforce the budget server-side, log usage, and kill-switch if abuse spikes.
+
+### [ ] ITEM 10 — Sponsor Accounts (invite-only)
+
+**Lock-in (2026-05-15):** invite-only sponsor signup, identical pattern to the first-admin setup-token flow. Open signup is **forbidden** — keeps inappropriate businesses (dispensaries, age-restricted products, etc.) off the platform. Sponsors apply via inquiry → admin reviews → admin issues invite token → sponsor signs up via that token.
+
+- New `sponsor` custom claim alongside `admin` + `parent`.
+- `/{tenant}/_main/sponsors/{sponsorId}` — name, type (individual|business), logoPath, website, message, anonymous, linkedInquiryId, prizeIds[], createdAt.
+- `/sponsor/dashboard` (or similar) — sponsor sees their donated prizes, draw history (how many times each was awarded), their custom "thank-you" content (ITEM 11).
+- Sponsor logo upload → Firebase Storage at `/{tenant}/sponsors/{sponsorId}/logo.{ext}`. Admin-write to public-read, with admin approval gating the public surface.
+- Email-invite Cloud Function — admin clicks "Invite to sponsor portal" on a `received` inquiry, function issues a one-time setup token (mirrors `issueSetupToken`/`claimSetupToken` from ITEM 2b).
+
+### [ ] ITEM 11 — Sponsor Thank-You / Prize-Won Experience
+
+- Sponsor uploads: short text message + ONE image (no video for v1). Examples: "Congrats! Free ice cream at our shop with this coupon" + a coupon image. Sponsor handles their own redemption mechanism (QR code, barcode, plain words on the image, etc.) — Library Loot just displays whatever they upload.
+- **Admin approval gates publish.** Every text + image goes to an admin queue; the sponsor's thank-you content is INVISIBLE on the kid's win screen until approved. Re-approval required if the sponsor edits.
+- When the prize draw approves a redemption tied to this sponsor, the kid's celebration screen shows the sponsor's content.
+- Sponsor dashboard surfaces a "shown to N kids" counter and "last shown DATE."
+- COPPA-relevant: all kid-facing sponsor content goes through admin review. Sponsor cannot push to kid surfaces directly.
+
+### [ ] ITEM 4 — Prize Inventory Management (residual after 9d/9e absorbed sponsor intake)
+
+- `/{tenant}/_main/prizes/{prizeId}` — kind (Fortnite-only enum v1), label, qtyAvailable, active, sponsorId (FK to ITEM 10), inquiryId (FK to original `sponsorInquiry`).
+- Public Donors page surfacing sponsor recognition (from `sponsors` collection, only `approved + non-anonymous` entries).
+- Admin bulk prize-entry tool: when a sponsor drops off a stack of physical V-Bucks gift cards, librarian enters qty + denomination in one form.
+- Convert-inquiry-to-prize-record flow: admin marks an inquiry as `received`, picks "Generate prize record(s)" → opens a quick-fill form pre-populated from the inquiry data.
 
 ### [ ] ITEM 5 — Challenge Lifecycle + Quiz Verification
 
@@ -578,6 +658,19 @@ Defer until a second real tenant asks. The current single-source-of-truth file a
 ---
 
 ## 📝 Session Notes
+
+### 2026-05-15 — ITEM 9a + 9b
+
+- **ITEM 9 sliced and re-scoped.** Original ITEM 4 absorbed sponsor intake into 9d/9e because Miguel wants AI helping with sponsor flow from day one. ITEM 4 shrunk to residual prize inventory. New items added: ITEM 10 (sponsor accounts, invite-only) and ITEM 11 (sponsor thank-you / prize-won screen, admin-approved).
+- **9a (operator setup) done.** Vertex AI API + Firebase AI Logic + App Check + reCAPTCHA Enterprise + debug token all wired in the Firebase Console. Site key in source (public); debug token in `.env.local` (gitignored); secret-key-shaped credential pasted into App Check provider config server-side.
+- **9b (LOOT shell) done.** Floating chat button on `/admin/*`, opens a panel that talks to Gemini 2.5 Flash via Vertex AI. Conversation persists in sessionStorage per session. No tools yet — those land in 9c. First successful chat (verified in dev): `"hi"` → `"Hey! Ready to level up some readers? What's on the quest list today?"` — system prompt landing the Fortnite-vibe tone.
+- **Bug landed mid-build — App Check init order.** First pass had App Check initialized via a side-effect import from `main.jsx`, which fired AFTER `getAuth()` / `getFirestore()` / etc. were already called via `AuthContext`'s transitive load of `firebase.js`. Service clients were provisioned before App Check was wired and never attached tokens to requests (100% of dev requests showed as "outdated client / missing token" in App Check metrics). Fixed by refactoring `src/firebase/appCheck.js` to export `initAppCheck(app)` as a pure function (no top-level side effects, no import from `firebase.js`), and calling it from `firebase.js` between `initializeApp(...)` and the service getters. Future Firebase services added to this codebase must be created AFTER the `initAppCheck` call.
+- **`firebase` SDK bumped 10.14.1 → 12.13.0** to get the canonical `firebase/ai` namespace (v10 only had `firebase/vertexai-preview`). Production build clean; no breaking changes for our usage pattern.
+- **Open bug surfaced (track for a near-term fix):** Navbar truncates the signed-in user's name to `Hi, Mi...` on the admin shell (and possibly other signed-in routes). Likely a CSS `text-overflow: ellipsis` on a too-narrow container. Investigate `Navbar.module.css` (and possibly `AdminLayout.module.css` for the `.who` line in the sidebar header — its `title` attribute already carries the full name as a hover tooltip, but the visible truncation is the issue).
+- **Design lock-ins for downstream items:**
+  - **9g** (public LOOT): match MCL-Central's rate-limit + token pattern. Read mcl-central source directly when we reach that item.
+  - **ITEM 10** (sponsor signup): **invite-only**. No open signup. Sponsors apply via inquiry → admin reviews + approves → admin issues invite token (mirror first-admin setup-token flow). Brand-safety filter against inappropriate businesses (dispensaries, age-restricted products) is intentional.
+  - **ITEM 11** (sponsor thank-you screen): **image + text only** for v1, no video. Admin approval REQUIRED before any kid-facing surface shows the content. Sponsor handles their own redemption (QR/barcode/words — Library Loot just displays what they upload). COPPA-relevant: all kid-facing sponsor content moderated.
 
 ### 2026-05-12 — Project kickoff
 

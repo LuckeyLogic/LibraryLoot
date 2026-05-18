@@ -13,6 +13,8 @@ import { NavLink, Outlet } from 'react-router-dom'
 
 import { useAuth }        from '../context/AuthContext.jsx'
 
+import LootButton         from './loot/LootButton.jsx'
+
 import styles             from './AdminLayout.module.css'
 
 const adminLinks = [
@@ -69,6 +71,11 @@ export default function AdminLayout() {
       <main className={styles.content}>
         <Outlet />
       </main>
+
+      {/* LOOT lives at the layout root so it shows on every /admin/* route
+          and never on public pages. Mounted unconditionally — the button
+          itself handles open/closed state. */}
+      <LootButton />
 
     </div>
   )
