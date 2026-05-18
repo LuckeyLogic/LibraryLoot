@@ -72,6 +72,21 @@ After it runs, affected users must sign out and back in for the new claim to app
 
 ---
 
+## `backfill-user-profiles.js` — Sync Auth profile fields into user docs
+
+Read-only against Firebase Auth, write-update against Firestore. Walks every Auth user and ensures their `displayName`, `photoURL`, and `email` are mirrored into `/{tenantId}/_main/users/{uid}`. Idempotent — only touches docs whose mirrored fields actually differ from the current Auth record. Use after the ITEM 9c.2 mirror first lands so historical user docs catch up with Auth without waiting for each user to sign in again. Re-run any time profile-field drift is suspected.
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json \
+  node backfill-user-profiles.js [tenantId]
+```
+
+- `[tenantId]` — optional. Defaults to `luckey-logic`.
+
+Skips users that have no Firestore user doc — run `backfill-user-claims.js` first for that case (it creates the doc; this one syncs profile fields into an existing doc).
+
+---
+
 ## `check-hygiene.js` — Audit Firestore docs vs. Storage objects
 
 Read-only. Compares Firestore docs to Storage objects under a tenant root and flags orphans in either direction:

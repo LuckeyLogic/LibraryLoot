@@ -35,9 +35,25 @@ import {
   updateProfile
 }                                  from 'firebase/auth'
 
+import {
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+  writeBatch
+}                                  from 'firebase/firestore'
+
 import { httpsCallable }            from 'firebase/functions'
 
-import { auth, functions }          from '../firebase'
+import LastModified                 from '../model/LastModified.js'
+
+import { auth, db, functions }      from '../firebase'
+
+// How stale `lastSeenAt` can get before we re-write it. Without this
+// floor, every token refresh (every hour, give or take) would write a
+// fresh timestamp even when nothing else changed. With it, we cap user-
+// doc writes to roughly once every 5 minutes per active session.
+const LAST_SEEN_REFRESH_MS = 5 * 60 * 1000
 
 const AuthContext = createContext(null)
 
@@ -143,6 +159,115 @@ export function AuthProvider({ children }) {
         // — common cause is Cloud Functions still propagating after deploy.
         // eslint-disable-next-line no-console
         console.warn('bootstrapTenantClaim failed; will retry next sign-in.', e)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [user, claims, loading])
+
+  // ── AUTH-PROFILE MIRROR ──
+  // Firebase Auth holds displayName / photoURL / email; admin views,
+  // future LOOT conversation logs, and Cloud Functions all need access
+  // to those values via the user's Firestore doc rather than going
+  // through the server-side Admin SDK. This effect mirrors them into
+  // `/{tenant}/_main/users/{uid}` whenever they drift out of sync.
+  //
+  // Two timestamp concepts on the user doc (different semantics):
+  //   - lastSeenAt:  bumped on every sign-in or 5+ min of active session,
+  //                  regardless of whether anything changed. Activity
+  //                  signal. Useful for "purge inactive users" etc.
+  //   - lastModified: a LastModified object (byName/byUUID/date/state).
+  //                   Bumped ONLY when fields actually change. Each prior
+  //                   value is archived to /lastModifieds/{id} subcollection
+  //                   in the same batched write — permanent audit trail.
+  //
+  // Gated on bootstrap success (`claims.tenant` set) so we never try to
+  // write into a doc that bootstrapTenantClaim hasn't created yet.
+  // Idempotent: reads the current doc, compares mirrored fields, writes
+  // only if something changed (or if lastSeenAt is stale by more than
+  // LAST_SEEN_REFRESH_MS). Excess re-renders cost one Firestore read.
+  useEffect(() => {
+    if (loading)                  return
+    if (!user)                    return
+    if (!claims || !claims.tenant) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        const userRef = doc(
+          db, claims.tenant, '_main', 'users', user.uid
+        )
+        const snap = await getDoc(userRef)
+        if (cancelled) return
+        if (!snap.exists()) {
+          // Bootstrap should have created the doc — if it's missing,
+          // something upstream failed. Leave a breadcrumb; do not try
+          // to create the doc from the client (rules forbid that).
+          // eslint-disable-next-line no-console
+          console.warn('[mirror] user doc missing — bootstrap may have failed.')
+          return
+        }
+        const current = snap.data() || {}
+        const wanted = {
+          displayName: user.displayName || null,
+          photoURL   : user.photoURL    || null,
+          email      : user.email       || null
+        }
+        const profileChanged = (
+          current.displayName !== wanted.displayName ||
+          current.photoURL    !== wanted.photoURL    ||
+          current.email       !== wanted.email
+        )
+        const lastSeenMs = current.lastSeenAt && current.lastSeenAt.toMillis
+          ? current.lastSeenAt.toMillis()
+          : 0
+        const lastSeenStale = (Date.now() - lastSeenMs) >= LAST_SEEN_REFRESH_MS
+
+        if (!profileChanged && !lastSeenStale) return
+
+        // Build the doc update. Always bump lastSeenAt (activity).
+        // Only bump lastModified when fields actually changed — and
+        // when we do bump it, archive the previous value to the
+        // /lastModifieds subcollection in the same batch so we never
+        // lose history if the main write fails.
+        const batch = writeBatch(db)
+
+        if (profileChanged) {
+          const newLastModified = new LastModified({
+            byName: user.displayName || user.email || '(unknown)',
+            byUUID: user.uid,
+            date  : serverTimestamp(),
+            state : 'updated'
+          }).toDict()
+
+          // Archive the previous lastModified BEFORE we overwrite it.
+          // First-ever mirror has no previous value — skip the archive.
+          if (current.lastModified) {
+            const archiveRef = doc(collection(userRef, 'lastModifieds'))
+            batch.set(archiveRef, current.lastModified)
+          }
+
+          batch.set(userRef, {
+            ...wanted,
+            lastSeenAt  : serverTimestamp(),
+            lastModified: newLastModified
+          }, { merge: true })
+        } else {
+          // Activity-only refresh — don't touch lastModified.
+          batch.set(userRef, {
+            lastSeenAt: serverTimestamp()
+          }, { merge: true })
+        }
+
+        await batch.commit()
+      } catch (e) {
+        // Non-fatal — auth still works without the mirror. Common
+        // cause during dev: Firestore rules haven't been redeployed
+        // since this code shipped (the new self-write + audit-archive
+        // rules live in firestore.rules). Run
+        // `firebase deploy --only firestore:rules` first.
+        // eslint-disable-next-line no-console
+        console.warn('[mirror] profile mirror failed (non-fatal)', e)
       }
     })()
 

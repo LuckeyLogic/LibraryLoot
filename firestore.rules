@@ -19,8 +19,19 @@ rules_version = '2';
 //     - Write: admin of this tenant
 //
 //   /{tenantId}/_main/users/{uid}
-//     - Read:  the user themselves, OR any admin of this tenant
-//     - Write: deny clients (only Cloud Functions write user docs)
+//     - Read:   the user themselves, OR any admin of this tenant.
+//     - Create: deny clients (Cloud Functions create user docs via bootstrap).
+//     - Update: admin (any field), OR the user themselves (only the
+//               mirrored profile fields — displayName, photoURL, email,
+//               lastSeenAt, lastModified — never role, createdAt,
+//               promotedToAdminAt, or anything else). ITEM 9c.2.
+//     - Delete: admin only.
+//
+//   /{tenantId}/_main/users/{uid}/lastModifieds/{lmId}
+//     - Append-only audit trail. The previous `lastModified` summary
+//       on the user doc gets archived here in the same batch when the
+//       doc is updated. Read by self or admin; create by self or
+//       admin; never updated or deleted (immutable history).
 //
 //   /{tenantId}/_main/users/{uid}/children/{childId}
 //     - Read/write: the owning parent, OR any admin of this tenant
@@ -70,7 +81,41 @@ service cloud.firestore {
     match /{tenantId}/_main/users/{uid} {
       allow read  : if (isSelf(uid) && inTenant(tenantId)) ||
                        isTenantAdmin(tenantId);
-      allow write : if false;          // Server-only writes (Cloud Functions)
+
+      // Doc creation stays server-only: bootstrapTenantClaim (parents)
+      // and claimSetupToken (admin promotion) create + initialize the
+      // doc with role + createdAt. Clients can't create user docs.
+      allow create: if false;
+
+      // Self-update: a user may write ONLY to the mirrored profile
+      // fields plus the lastModified summary object on their own doc.
+      // The diff-affectedKeys check ensures they can't sneak in role /
+      // createdAt / promotedToAdminAt edits.
+      // ITEM 9c.2 — AuthContext writes these on sign-in / profile change.
+      // Future ITEM 12 will extend this list with 'onboarding'.
+      allow update: if isTenantAdmin(tenantId) ||
+                       (isSelf(uid) && inTenant(tenantId) &&
+                        request.resource.data.diff(resource.data)
+                          .affectedKeys()
+                          .hasOnly(['displayName', 'photoURL', 'email',
+                                    'lastSeenAt', 'lastModified']));
+
+      allow delete: if isTenantAdmin(tenantId);
+    }
+
+    // ── USER AUDIT TRAIL (lastModifieds subcollection) ──
+    // Each entry is a snapshot of the previous `lastModified` summary
+    // that was on the user doc before the latest update overwrote it.
+    // Archive is append-only — once written, an entry can never be
+    // edited or deleted by anyone (including the user themselves).
+    // Only the user (for their own history) and admins (for any user)
+    // can read the audit trail.
+    match /{tenantId}/_main/users/{uid}/lastModifieds/{lmId} {
+      allow read         : if (isSelf(uid) && inTenant(tenantId)) ||
+                              isTenantAdmin(tenantId);
+      allow create       : if (isSelf(uid) && inTenant(tenantId)) ||
+                              isTenantAdmin(tenantId);
+      allow update, delete: if false;
     }
 
     // ── CHILDREN (sub-profiles under a parent's user doc) ──
