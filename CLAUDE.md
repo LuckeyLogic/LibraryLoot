@@ -646,6 +646,71 @@ Defer until a second real tenant asks. The current single-source-of-truth file a
 
 ---
 
+### [ ] ITEM 12 — First-time user onboarding (inline coachmarks)
+
+**Must ship before public launch.** New users won't know what every UI element does — the LOOT button is obvious to the builder, opaque to a librarian who's never seen it. This item adds a discoverable, dismissable, per-user-tracked layer of "what is this?" hints.
+
+**v1 pattern (this item): inline coachmarks only.**
+- Small pulsing dot + lightning glyph next to a hotspot.
+- Click → popover with 1-2 sentence explainer + "Got it" button.
+- Click "Got it" → ack stored in Firestore, coachmark never shows again for that user + hotspot.
+- Each hotspot has a stable string ID + a version number. Bump the version when a feature materially changes (e.g. "LOOT now does book lookups too" after 9c lands) and the coachmark fires again to teach the new capability — without resetting acks for unrelated hotspots.
+
+**v2 pattern (deferred — separate future item):** first-visit guided tour. Multi-step spotlight overlay on first arrival to `/admin` or `/account` that walks through the page's primary features in sequence. Same Firestore-backed ack store; one tour completion = bulk ack for all hotspots in the tour. Surfacing it once v1 has shipped + we've learned what new users actually struggle with.
+
+#### Data shape
+
+Per-user, in the existing user doc:
+
+```js
+/{tenant}/_main/users/{uid}
+  ...existing fields...
+  onboarding: {
+    acks: {
+      'loot-button'      : { ackedAt: <ts>, version: 1 },
+      'admin-tenant-id'  : { ackedAt: <ts>, version: 1 },
+      'isbn-scanner'     : { ackedAt: <ts>, version: 1 },
+      'add-child-card'   : { ackedAt: <ts>, version: 1 },
+      'verified-badge'   : { ackedAt: <ts>, version: 1 },
+      // ...one entry per hotspot the user has dismissed
+    }
+  }
+```
+
+**Firestore rules:** extend `/{tenant}/_main/users/{uid}` so a user can self-write only the `onboarding.acks` subfield (not the whole doc — prevents privilege escalation). Admins keep full write per existing rules.
+
+#### Scope decisions (locked in 2026-05-15)
+
+- **Anonymous users — NO onboarding.** Public LOOT (9g) and other anon surfaces ship without coachmarks. Onboarding requires an authenticated user we can store acks against.
+- **Universal hotspot definitions in source.** v1 defines the hotspot catalog in `src/lib/onboarding/hotspots.js`. Per-tenant customization (a library editing the hint text for their own site) deferred to a later item if/when asked.
+- **Visual style:** gold-bordered popover, LOOT lightning glyph (`⚡`) in the header, "Got it" button. Tokens: `--loot-gold`, `--loot-gold-bright` for the border + glow, `--neon-purple` for the popover surface, `--hud-white` for the body text. Matches LOOT chat's existing visual identity so the two read as one onboarding voice.
+
+#### Files to create
+
+- `src/lib/onboarding/hotspots.js` — universal catalog. Each entry: `{id, title, body, version}`. Source of truth for what fires where.
+- `src/hooks/useOnboardingAck.js` — hook for the React side. Reads the user's ack state from Firestore (live `onSnapshot`), returns `{ acked: boolean, isLoading: boolean, ack: () => void }`. `ack()` writes to Firestore.
+- `src/components/Coachmark.jsx` + `.module.css` — pulsing dot + popover component. Takes a hotspot ID prop, renders nothing if already acked. Positions itself relative to its parent (or accepts an anchor ref).
+- `src/components/CoachmarkProvider.jsx` (maybe — TBD during scoping) — context-aware coordinator that only allows one coachmark visible at a time so we don't pile them on a busy page.
+
+#### Files to modify (initial hotspots — wire each with `<Coachmark id="...">`)
+
+- `src/components/loot/LootButton.jsx` — coachmark on the floating button. `loot-button` v1: "Tap LOOT for help — answers about books, sponsors, and how to use this admin panel."
+- `src/components/AdminLayout.jsx` — coachmark on the tenant ID line. `admin-tenant-id` v1: "This is your library's data root. Each library's data lives here in isolation — nothing leaks across tenants."
+- `src/pages/admin/AdminBooks.jsx` — coachmark on the "Scan barcode" button. `isbn-scanner` v1: "Tap to scan a book's barcode with your camera — fastest way to add a book to the catalog."
+- `src/pages/Account.jsx` — `add-child-card` v1: "Add each kid as a sub-profile here. We only collect first name + optional birth year." And on the pending-verification badge after a child is added: `verified-badge` v1: "Bring your kid to the library — a librarian verifies them in person before they can earn prizes."
+
+(More hotspots to identify during scoping. Each NEW surface shipped AFTER ITEM 12 lands should include its own hotspot in the same commit.)
+
+#### Acceptance check before declaring 12 done
+
+- A fresh test user (clean Firestore user doc) signs in and sees every initial-hotspot coachmark on the appropriate surface.
+- Clicking "Got it" persists the ack within the session AND across browsers (Firestore-backed, not localStorage).
+- Bumping a hotspot's `version` in source re-fires the coachmark for everyone, even users who acked v1.
+- Skipping a coachmark doesn't break the underlying feature — every hotspot is "wrapped around" its anchor, not "blocking" it.
+- No coachmarks render for unauthenticated visitors.
+
+---
+
 ### [ ] ITEM 8 — Handoff Scripts
 
 - `scripts/seed-tenant.js` — provisions a fresh tenant root with defaults
@@ -677,6 +742,7 @@ Defer until a second real tenant asks. The current single-source-of-truth file a
 - **9a (operator setup) done.** Vertex AI API + Firebase AI Logic + App Check + reCAPTCHA Enterprise + debug token all wired in the Firebase Console. Site key in source (public); debug token in `.env.local` (gitignored); secret-key-shaped credential pasted into App Check provider config server-side.
 - **9b (LOOT shell) done.** Floating chat button on `/admin/*`, opens a panel that talks to Gemini 2.5 Flash via Vertex AI. Conversation persists in sessionStorage per session. No tools yet — those land in 9c. First successful chat (verified in dev): `"hi"` → `"Hey! Ready to level up some readers? What's on the quest list today?"` — system prompt landing the Fortnite-vibe tone.
 - **LOOT system-prompt tuning, mid-9b verification.** First version was too restrictive — "Who is the author of _Steam Train, Dream Train_?" got refused with "Not my loot drop — try Google" even though the book is in the catalog and authorship is squarely within scope. Loosened the prompt to explicitly cover books/authors/reading levels/program logistics/sponsor strategy/COPPA basics/platform-itself questions, and tightened the refusal list to truly off-program topics (recipes, sports, news, generic coding, personal advice). Also discovered LOOT was confidently inventing a "ticket-based prize draw" mechanic that doesn't exist — added a `GROUND TRUTH` block to the system prompt that documents the actual per-completion verifiable random draw against the active prize pool (every completion → one prize, randomization on WHICH prize) and explicitly tells LOOT not to invent mechanics it can't ground in the docs or its tools. New tracked sub-item (9c.1) for LOOT conversation logging + weekly digest so we catch future hallucinations early.
+- **ITEM 12 spec'd — first-time user onboarding (inline coachmarks v1).** Surfaced when Miguel pointed out that he knows what the LOOT button does because he built it; a new admin / parent doesn't. Design locked: inline coachmarks only for v1 (first-visit tour deferred to v2), per-user Firestore ack store with hotspot-id + version so material feature changes can re-fire the coachmark, universal hotspot catalog in source (per-tenant customization deferred), no onboarding for anonymous visitors, gold-bordered popover matching LOOT's visual identity. Must ship before public launch. Initial hotspots: LOOT button, admin tenant ID, ISBN scanner, add-child card, pending-verification badge. New surfaces shipped after ITEM 12 lands should include their own hotspot definitions in the same commit.
 - **Mobile body-scroll lock — iOS Safari needed the heavier pattern.** First pass used `document.body.style.overflow = 'hidden'`, which works on desktop browsers but Safari ignores it once a touch-drag gesture starts. Replaced with the snapshot-scrollY + `position: fixed` + negative-top + `width: 100%` lock pattern, plus `overscroll-behavior: contain` on the message scroller as defense-in-depth, plus a blurred backdrop element behind the panel on mobile (`backdrop-filter: blur(8px) saturate(140%)`) so the fullscreen LOOT feels like its own surface and tapping the backdrop closes the panel.
 - **Bug landed mid-build — App Check init order.** First pass had App Check initialized via a side-effect import from `main.jsx`, which fired AFTER `getAuth()` / `getFirestore()` / etc. were already called via `AuthContext`'s transitive load of `firebase.js`. Service clients were provisioned before App Check was wired and never attached tokens to requests (100% of dev requests showed as "outdated client / missing token" in App Check metrics). Fixed by refactoring `src/firebase/appCheck.js` to export `initAppCheck(app)` as a pure function (no top-level side effects, no import from `firebase.js`), and calling it from `firebase.js` between `initializeApp(...)` and the service getters. Future Firebase services added to this codebase must be created AFTER the `initAppCheck` call.
 - **`firebase` SDK bumped 10.14.1 → 12.13.0** to get the canonical `firebase/ai` namespace (v10 only had `firebase/vertexai-preview`). Production build clean; no breaking changes for our usage pattern.
