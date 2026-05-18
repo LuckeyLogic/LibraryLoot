@@ -202,7 +202,7 @@ async function searchOpenLibrary(title, limit) {
     const body = await response.json()
     const docs = Array.isArray(body.docs) ? body.docs : []
 
-    return docs.map((d) => ({
+    const mapped = docs.map((d) => ({
       isbn13       : pickIsbn13(d.isbn),
       title        : d.title || '',
       authors      : Array.isArray(d.author_name) ? d.author_name : [],
@@ -210,6 +210,17 @@ async function searchOpenLibrary(title, limit) {
       coverUrl     : d.cover_i ? `${OPEN_LIBRARY_COVERS}/id/${d.cover_i}-L.jpg` : null,
       source       : 'open-library'
     }))
+
+    // Sort ISBN-13-bearing matches first — they're actionable for
+    // downstream catalog checks. Edition entries without an ISBN
+    // still come back so the caller can show "this title exists
+    // but no ISBN found" when nothing better turns up.
+    mapped.sort((a, b) => {
+      if (a.isbn13 && !b.isbn13) return -1
+      if (!a.isbn13 && b.isbn13) return  1
+      return 0
+    })
+    return mapped
   } catch (_err) {
     return []
   }

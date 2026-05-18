@@ -33,6 +33,12 @@ rules_version = '2';
 //       doc is updated. Read by self or admin; create by self or
 //       admin; never updated or deleted (immutable history).
 //
+//   /{tenantId}/_main/lootSessions/{sessionId}
+//     - Per-session chat log for the LOOT admin assistant. ITEM 9c.1a.
+//     - Read by any admin of the tenant; create by an admin whose
+//       UID matches the session's userUid; update by the session's
+//       original owner; delete by any tenant admin.
+//
 //   /{tenantId}/_main/users/{uid}/children/{childId}
 //     - Read/write: the owning parent, OR any admin of this tenant
 //
@@ -100,6 +106,37 @@ service cloud.firestore {
                           .hasOnly(['displayName', 'photoURL', 'email',
                                     'lastSeenAt', 'lastModified']));
 
+      allow delete: if isTenantAdmin(tenantId);
+    }
+
+    // ── LOOT SESSIONS (admin AI conversations) ──
+    // One doc per chat session keyed by a per-tab UUID. The `turns`
+    // array is rewritten on every model response (capped at last
+    // 50). ITEM 9c.1a wired this up.
+    //
+    //   Read    — any admin of this tenant. Modeled after MCL's
+    //             adminChatLogs pattern: admins as a group benefit
+    //             from seeing each other's questions to LOOT, and
+    //             the weekly insight digest (9c.1b) needs read
+    //             access too (it runs server-side with Admin SDK
+    //             so it bypasses these rules, but keeping read
+    //             open to admins lets the UI viewer (9c.1c) work).
+    //   Create  — only an admin can create, and the doc's userUid
+    //             must match the caller. Prevents one admin from
+    //             impersonating another in the session log.
+    //   Update  — only the original session owner can append more
+    //             turns. Other admins can read but can't modify.
+    //   Delete  — any tenant admin can purge a session (operator
+    //             control + future retention cleanup).
+    //
+    // Audience values: 'admin' for now. 'parent' / 'anon' arrive
+    // in 9f and 9g respectively, and we'll widen the rules then.
+    match /{tenantId}/_main/lootSessions/{sessionId} {
+      allow read  : if isTenantAdmin(tenantId);
+      allow create: if isTenantAdmin(tenantId) &&
+                       request.resource.data.userUid == request.auth.uid;
+      allow update: if isTenantAdmin(tenantId) &&
+                       resource.data.userUid == request.auth.uid;
       allow delete: if isTenantAdmin(tenantId);
     }
 

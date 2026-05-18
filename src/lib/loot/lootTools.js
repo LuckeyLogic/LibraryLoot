@@ -20,13 +20,14 @@
 // Created by Miguel Brown on 5/15/26.
 // Copyright (c) 2026 Luckey Logic LLC. All rights reserved.
 
-import { getDoc }                       from 'firebase/firestore'
+import { getDoc, getDocs }              from 'firebase/firestore'
 
 import { lookupBookByIsbn,
          searchBooksByTitle }            from '../../utils/bookLookup.js'
 import { normalizeIsbn }                 from '../../utils/isbn.js'
 
-import { tenantDoc }                     from '../../firebase/tenant.js'
+import { tenantCollection,
+         tenantDoc }                     from '../../firebase/tenant.js'
 
 // ── DECLARATIONS ─────────────────────────────────────────────────────
 //
@@ -80,7 +81,7 @@ const declarations = [
       'catalog (Firestore). Returns { inCatalog, active, title, addedAt }. ' +
       'Distinct from lookupBookByIsbn — that searches the wider web; this ' +
       'reports what\'s actually been added to this library\'s shelf. Use ' +
-      'to answer "is X in our catalog?" questions.',
+      'when you already know the ISBN; otherwise prefer searchCatalogByTitle.',
     parameters: {
       type      : 'object',
       properties: {
@@ -90,6 +91,33 @@ const declarations = [
         }
       },
       required: ['isbn']
+    }
+  },
+  {
+    name       : 'searchCatalog',
+    description:
+      'Flexible search of THIS tenant\'s book catalog. Pass any combination ' +
+      'of the criteria below; books must match ALL provided criteria (AND ' +
+      'semantics). Returns up to 20 matches with { isbn13, title, authors, ' +
+      'publishedYear, readingLevel, minAge, maxAge, active, quizApproved }. ' +
+      'Use this FIRST for any "what do we have…" / "is X in our catalog?" / ' +
+      '"anything by Y?" / "books for a 7-year-old" / "what middle-grade ' +
+      'books need quiz approval?" question — it\'s one Firestore read, no ' +
+      'web round-trip. Fall back to searchBooksByTitle (web) only when ' +
+      'this returns no matches.',
+    parameters: {
+      type      : 'object',
+      properties: {
+        title       : { type: 'string',  description: 'Title substring (case-insensitive, punctuation-normalized — commas/colons/etc. don\'t need to match).' },
+        author      : { type: 'string',  description: 'Author name substring; matches if ANY author in the book\'s authors[] array contains this.' },
+        yearMin     : { type: 'integer', description: 'Minimum publishedYear (inclusive).' },
+        yearMax     : { type: 'integer', description: 'Maximum publishedYear (inclusive).' },
+        readingLevel: { type: 'string',  description: 'Exact match. Valid values: "Early reader", "Grade 3-5", "Middle grade", "YA", "Not specified".' },
+        forAge      : { type: 'integer', description: 'Books appropriate for a kid of this age. Matches if book.minAge <= N AND (book.maxAge is null OR book.maxAge >= N).' },
+        activeOnly  : { type: 'boolean', description: 'When true, only return books with active: true.' },
+        quizApproved: { type: 'boolean', description: 'Exact match on quizApproved (true/false).' }
+      }
+      // No required fields — empty {} lists the whole catalog (capped).
     }
   }
 ]
@@ -181,6 +209,148 @@ async function impl_isBookInCatalog(args) {
   }
 }
 
+/**
+ * Normalize a string for fuzzy substring comparison: lowercase, strip
+ * non-alphanumerics (commas / periods / colons / hyphens / apostrophes /
+ * parens / em-dashes / ampersands all collapse to whitespace), then
+ * collapse runs of whitespace to a single space.
+ *
+ * Catalog: "Steam Train, Dream Train" → "steam train dream train"
+ * User:    "Steam Train Dream Train"  → "steam train dream train"
+ * → match.
+ *
+ * Same normalizer is used for both title and author searches so
+ * "J. K. Rowling" matches "JK Rowling" matches "jk rowling".
+ */
+function normalizeForSearch(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Build a single human-readable summary of which catalog criteria are
+ * active. Drives the chip label in LootMessage so the admin can see
+ * exactly what LOOT is searching for ("📚 Searching catalog: author
+ * 'Ann M Martin', year ≥ 2020"). Returns "all books" when no
+ * criteria were passed.
+ */
+function describeCatalogCriteria(args = {}) {
+  const parts = []
+  if (args.title)        parts.push(`title "${args.title}"`)
+  if (args.author)       parts.push(`author "${args.author}"`)
+  if (args.yearMin != null && args.yearMax != null) parts.push(`year ${args.yearMin}-${args.yearMax}`)
+  else if (args.yearMin != null) parts.push(`year ≥ ${args.yearMin}`)
+  else if (args.yearMax != null) parts.push(`year ≤ ${args.yearMax}`)
+  if (args.readingLevel) parts.push(`level "${args.readingLevel}"`)
+  if (args.forAge != null) parts.push(`age ${args.forAge}`)
+  if (args.activeOnly)   parts.push('active only')
+  if (args.quizApproved !== undefined && args.quizApproved !== null) {
+    parts.push(args.quizApproved ? 'quiz approved' : 'quiz unapproved')
+  }
+  return parts.length === 0 ? 'all books' : parts.join(', ')
+}
+
+/**
+ * @param {Object} args  Any combination of {title, author, yearMin,
+ *                       yearMax, readingLevel, forAge, activeOnly,
+ *                       quizApproved}.
+ * @returns {Promise<Object>}
+ */
+async function impl_searchCatalog(args = {}) {
+  try {
+    // Pre-compute normalized needles so we don't do it per book.
+    const titleNeedle  = args.title  ? normalizeForSearch(args.title)  : null
+    const authorNeedle = args.author ? normalizeForSearch(args.author) : null
+
+    const snap = await getDocs(tenantCollection('books'))
+    const matches = []
+
+    snap.forEach((d) => {
+      const data = d.data() || {}
+
+      // Title substring (punctuation-normalized).
+      if (titleNeedle) {
+        const t = normalizeForSearch(data.title)
+        if (!t || !t.includes(titleNeedle)) return
+      }
+
+      // Author substring against ANY author in the array.
+      if (authorNeedle) {
+        const authors = Array.isArray(data.authors) ? data.authors : []
+        const anyAuthorMatch = authors.some(
+          (a) => normalizeForSearch(a).includes(authorNeedle)
+        )
+        if (!anyAuthorMatch) return
+      }
+
+      // Year range (inclusive). null publishedYear excludes the book
+      // from any year-bounded query — we have no idea where it falls.
+      if (args.yearMin != null) {
+        if (typeof data.publishedYear !== 'number' || data.publishedYear < args.yearMin) return
+      }
+      if (args.yearMax != null) {
+        if (typeof data.publishedYear !== 'number' || data.publishedYear > args.yearMax) return
+      }
+
+      // Reading level — exact match (case-sensitive on canonical
+      // enum value).
+      if (args.readingLevel) {
+        if (data.readingLevel !== args.readingLevel) return
+      }
+
+      // "Appropriate for age N": book.minAge <= N AND
+      // (book.maxAge is null OR book.maxAge >= N).
+      if (args.forAge != null) {
+        const minA = typeof data.minAge === 'number' ? data.minAge : null
+        const maxA = typeof data.maxAge === 'number' ? data.maxAge : null
+        if (minA == null) return   // no minAge → can't confirm appropriateness
+        if (minA > args.forAge) return
+        if (maxA != null && maxA < args.forAge) return
+      }
+
+      // active filter.
+      if (args.activeOnly === true) {
+        if (data.active !== true) return
+      }
+
+      // quizApproved filter (explicit true/false).
+      if (args.quizApproved !== undefined && args.quizApproved !== null) {
+        if (data.quizApproved !== args.quizApproved) return
+      }
+
+      matches.push({
+        isbn13       : data.isbn13 || d.id,
+        title        : data.title || '',
+        authors      : Array.isArray(data.authors) ? data.authors : [],
+        publishedYear: typeof data.publishedYear === 'number' ? data.publishedYear : null,
+        readingLevel : data.readingLevel || null,
+        minAge       : typeof data.minAge === 'number' ? data.minAge : null,
+        maxAge       : typeof data.maxAge === 'number' ? data.maxAge : null,
+        active       : data.active === true,
+        quizApproved : data.quizApproved === true
+      })
+    })
+
+    if (matches.length === 0) {
+      return {
+        error  : `No catalog match for { ${describeCatalogCriteria(args)} }. Try widening the criteria — or use searchBooksByTitle (web) to confirm a specific book exists.`,
+        matches: []
+      }
+    }
+
+    return { matches: matches.slice(0, 20), totalMatched: matches.length }
+  } catch (err) {
+    // TODO(ITEM 9c.1): write to LOOT error log.
+    console.error('[lootTools] searchCatalog error', err)
+    return {
+      error: `Catalog search failed: ${err && err.message ? err.message : 'unknown error'}.`
+    }
+  }
+}
+
 // ── EXPORTS ──────────────────────────────────────────────────────────
 
 /** FunctionDeclaration[] — passed into getGenerativeModel({ tools }). */
@@ -193,7 +363,8 @@ export const lootToolDeclarations = declarations
 export const lootToolImplementations = {
   lookupBookByIsbn  : impl_lookupBookByIsbn,
   searchBooksByTitle: impl_searchBooksByTitle,
-  isBookInCatalog   : impl_isBookInCatalog
+  isBookInCatalog   : impl_isBookInCatalog,
+  searchCatalog     : impl_searchCatalog
 }
 
 /**
@@ -217,5 +388,9 @@ export const LOOT_TOOL_DISPLAY = {
   isBookInCatalog   : {
     emoji: '📚',
     label: (a) => `Checking catalog for ${a && a.isbn ? a.isbn : '…'}`
+  },
+  searchCatalog     : {
+    emoji: '📚',
+    label: (a) => `Searching catalog: ${describeCatalogCriteria(a || {})}`
   }
 }

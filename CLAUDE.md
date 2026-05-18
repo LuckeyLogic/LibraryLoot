@@ -559,17 +559,41 @@ Surfaced 2026-05-15 during navbar debugging: `displayName` and `photoURL` live i
 
 Lands before 9e (admin sponsor review) so the admin can see "submitted by Jane Doe" rather than just a UID.
 
-#### [ ] ITEM 9c.1 — LOOT conversation logging + weekly digest
+#### ITEM 9c.1 — LOOT conversation logging + weekly digest (sliced)
 
-Modeled after how `mcl-central` logs GUNNY conversations. When we get here, **read `/Users/miguelbrown/LuckeyLogic/Programming/WebBasedProjects/mcl-central` first** for the exact pattern — collection shape, retention policy, digest format.
+After reading MCL Central's GUNNY logging pattern (functions/index.js `adminChat` + `generateChatInsights` + `GunnyChatInsights.jsx`), sliced 9c.1 into three thin items so the workflow rule about one complex change at a time stays clean:
 
-- Each LOOT message-turn writes to Firestore at `/{tenant}/_main/lootSessions/{sessionId}` (or `/lootSessions/{sessionId}/turns/{turnId}` if turns are too big to keep in one doc). Fields: `userUid`, `userDisplayName`, `sessionStartedAt`, `lastTurnAt`, `audience` (`admin`/`parent`/`anon` per future item), `turns: [{ role, text, timestampMs }]`, optional `toolCalls`, optional `tokenUsage`.
-- Session ID = a per-tab UUID stored in `sessionStorage` so each fresh session is a discrete log.
-- Admin-only read access via Firestore rules. PII-conscious — kid names may appear in admin chat about sponsor inquiries / book picks, so this collection is sensitive.
-- Cloud Function (scheduled, weekly): aggregates the week's sessions, emails Miguel a digest (top user questions, refusal rate, error rate, total turns, total tokens, longest sessions). Email provider TBD — SendGrid most likely; that's an unblocking dependency for ITEM 11's "draft reply email" feature too, so pick once and reuse.
-- Admin viewer (separate page or panel inside `/admin`): browse past LOOT sessions, search by date / user, see full transcripts. Useful for tuning the system prompt + spotting common admin pain points worth turning into tools or UI.
+  - **9c.1a** — Client-side logging from LootPanel + Firestore rules.
+  - **9c.1b** — Scheduled Cloud Function `generateLootInsights` (weekly digest via Gemini).
+  - **9c.1c** — Admin `/admin/loot` viewer page for digests + raw transcripts.
 
-Miguel surfaced this need on 2026-05-15 during 9b verification, after spotting LOOT confidently hallucinating a "ticket-based prize draw" mechanic that doesn't exist. Weekly digest will help catch those hallucinations early before they shape an admin's mental model of how the platform works.
+#### [✅] ITEM 9c.1a — LOOT conversation logging (client + rules)
+
+Implemented in 9c.1a (2026-05-15):
+
+- New `src/lib/loot/lootLogger.js` — exports `logLootSession({sessionId, user, tenantClaim, audience, history, sessionStartFlag})` + `getOrCreateLootSessionId()`. Uses `setDoc(..., {merge: true})` with a one-time `getDoc` existence check (per-mount cached on a ref) so `sessionStartedAt` only writes on the first turn of a session, not every turn. Cap of 50 turns per doc to keep size bounded.
+- `LootPanel.jsx` — sessionId generated from `getOrCreateLootSessionId()` (per-tab, persistent across reloads via sessionStorage); each user/tool/model turn carries a `timestampMs`; `logLootSession` is called after each model reply with an accumulator of all turns added during the exchange (user → tool* → model). Non-fatal failures only console.warn; chat keeps working.
+- Doc shape at `/{tenant}/_main/lootSessions/{sessionId}`: `{sessionId, userUid, userDisplayName, userEmail, tenantId, audience: 'admin', sessionStartedAt, lastTurnAt, turns: [{role, text|name|args, timestampMs}]}`.
+- Firestore rules: read by any tenant admin (MCL pattern — admin group benefits from collective visibility); create + update gated on the session's owning UID matching `request.auth.uid`; delete by any tenant admin (operator control + future retention).
+- LOOT system prompt updated with a LOGGING & TRANSPARENCY section so LOOT can answer "is this conversation logged?" honestly when asked.
+
+Audience labels: 'admin' for now. 'parent' / 'anon' arrive in 9f / 9g and will use the same logger + doc shape with the audience field flipped. Rules will need to widen at that point.
+
+Miguel surfaced this need on 2026-05-15 during 9b verification, after spotting LOOT confidently hallucinating a "ticket-based prize draw" mechanic that doesn't exist. The weekly digest (9c.1b) will help catch those hallucinations early before they shape an admin's mental model of how the platform works.
+
+#### [ ] ITEM 9c.1b — Weekly insights Cloud Function (`generateLootInsights`)
+
+- Scheduled Cloud Function, Monday 06:00 UTC. Multi-tenant iteration (v1 = just `luckey-logic`).
+- Reads `/{tenant}/_main/lootSessions` where `lastTurnAt >= 7d ago`. Samples up to 200 user messages.
+- Sends the sample to Vertex AI Gemini 2.5 Flash for a summary covering: top admin pain points, common workflows, off-program refusals, things LOOT couldn't answer, recommended UI/tool improvements.
+- Writes result to `/{tenant}/_main/lootInsights/{YYYY-WNN}` with shape `{weekId, generatedAt, totalSessions, totalMessages, summary, byUser: [...]}`.
+- No email. Insights live in Firestore; 9c.1c reads them.
+
+#### [ ] ITEM 9c.1c — Admin LOOT insights viewer
+
+- New `/admin/loot` page. Lists weekly insights (most recent first); admin can drill into individual session transcripts (raw `lootSessions` docs).
+- Transcripts render via the existing `LootMessage` component so chat history reads identically to the live chat.
+- Useful for tuning the system prompt + spotting common admin pain points worth turning into tools or UI changes.
 
 #### [ ] ITEM 9d — Public sponsor intake form (no AI on the public side)
 
@@ -757,6 +781,7 @@ Per-user, in the existing user doc:
 - **9b (LOOT shell) done.** Floating chat button on `/admin/*`, opens a panel that talks to Gemini 2.5 Flash via Vertex AI. Conversation persists in sessionStorage per session. No tools yet — those land in 9c. First successful chat (verified in dev): `"hi"` → `"Hey! Ready to level up some readers? What's on the quest list today?"` — system prompt landing the Fortnite-vibe tone.
 - **LOOT system-prompt tuning, mid-9b verification.** First version was too restrictive — "Who is the author of _Steam Train, Dream Train_?" got refused with "Not my loot drop — try Google" even though the book is in the catalog and authorship is squarely within scope. Loosened the prompt to explicitly cover books/authors/reading levels/program logistics/sponsor strategy/COPPA basics/platform-itself questions, and tightened the refusal list to truly off-program topics (recipes, sports, news, generic coding, personal advice). Also discovered LOOT was confidently inventing a "ticket-based prize draw" mechanic that doesn't exist — added a `GROUND TRUTH` block to the system prompt that documents the actual per-completion verifiable random draw against the active prize pool (every completion → one prize, randomization on WHICH prize) and explicitly tells LOOT not to invent mechanics it can't ground in the docs or its tools. New tracked sub-item (9c.1) for LOOT conversation logging + weekly digest so we catch future hallucinations early.
 - **Navbar bugs fixed (truncation + mobile menu).** "Hi, Miguel" was clipping to "Hi, Mi..." because of a defensive `max-width: 12ch; overflow: hidden; text-overflow: ellipsis` on `.greeting` that pre-dated the upstream `greeting()` helper's first-name-only collapse. Cap was never needed once we stopped rendering raw emails. Removed entirely; only `white-space: nowrap` remains. Also wired outside-tap + Escape dismiss for the mobile hamburger menu — refs on the toggle button and the nav panel; a `pointerdown` handler at the document level closes the menu when a tap lands outside both. Effect is only attached while the menu is open (no event handler in the common closed state). Verified: tap-outside closes, tap-toggle still toggles, tap-link still navigates + closes, Escape closes.
+- **ITEM 9c.1a shipped — LOOT conversation logging.** Modeled after MCL Central's `adminChatLogs` pattern: one doc per session keyed by per-tab UUID, full turns array overwritten on each model response (capped at 50 turns), `setDoc(..., {merge: true})` with a one-time getDoc check to keep `sessionStartedAt` from being clobbered on subsequent writes. New `src/lib/loot/lootLogger.js` exports `logLootSession()` + `getOrCreateLootSessionId()` so future audiences (parents 9f, anon 9g) can reuse the same write path. Tool-call chips are included in the persisted turns so the future transcript viewer matches the live chat. Rules: read by any tenant admin; create + update gated on the session's owning UID; delete by any admin. System prompt updated with a LOGGING & TRANSPARENCY section so LOOT answers honestly if asked. 9c.1b (digest function) and 9c.1c (admin viewer) follow as separate items. Skipped LastModified on session docs by design — the natural shape of a chat log (lastTurnAt + always-growing turns array) is its own audit trail.
 - **ITEM 9c.2 shipped — Auth profile mirror + LastModified accountability.** AuthContext gained a new effect that gates on bootstrap success (`claims.tenant` set) and, when a user signs in OR their auth-user object changes mid-session, reads the user's Firestore doc and writes mirrored fields (`displayName`, `photoURL`, `email`) when they've drifted. Two distinct timestamp concepts now live on the doc:
   - **`lastSeenAt`** — activity signal. Bumped on sign-in or every 5+ min of active session regardless of changes. 5-minute freshness floor on writes to avoid token-refresh spam.
   - **`lastModified`** — an embedded `LastModified` object `{byName, byUUID, date, state}` (ported from MCL Central's `model/LastModified.js`). Bumped ONLY when the mirrored fields actually changed. The previous value is archived to a write-once `lastModifieds` subcollection in the same `writeBatch`, giving us a permanent accountability trail without inflating the user doc.

@@ -13,6 +13,10 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useAuth }                            from '../../context/AuthContext.jsx'
 
 import { chatWithLoot }                       from '../../lib/loot/lootClient.js'
+import {
+  getOrCreateLootSessionId,
+  logLootSession
+}                                              from '../../lib/loot/lootLogger.js'
 
 import LootMessage                            from './LootMessage.jsx'
 
@@ -50,7 +54,7 @@ function saveHistory(history) {
  */
 export default function LootPanel({ onClose }) {
 
-  const { user }                  = useAuth()
+  const { user, tenantClaim }     = useAuth()
   const [history,  setHistory]    = useState(loadHistory)
   const [draft,    setDraft]      = useState('')
   const [sending,  setSending]    = useState(false)
@@ -58,6 +62,14 @@ export default function LootPanel({ onClose }) {
 
   const scrollerRef = useRef(null)
   const inputRef    = useRef(null)
+
+  // Per-tab LOOT session ID — generated once, reused across reloads
+  // of the same tab so we keep appending to the same Firestore doc.
+  const sessionIdRef       = useRef(getOrCreateLootSessionId())
+  // Tracks whether we've already checked Firestore for the session
+  // doc's existence (so we only do that getDoc once per mount). The
+  // logger mutates this object.
+  const sessionStartFlagRef = useRef({ checked: false, exists: false })
 
   // Auto-scroll to the bottom whenever the conversation grows.
   useEffect(() => {
@@ -126,11 +138,18 @@ export default function LootPanel({ onClose }) {
     const text = draft.trim()
     if (!text || sending) return
 
-    const next = [...history, { role: 'user', text }]
+    const userTurn = { role: 'user', text, timestampMs: Date.now() }
+    const next     = [...history, userTurn]
     setHistory(next)
     setDraft('')
     setSending(true)
     setError(null)
+
+    // Local accumulator of turns added during this exchange so we
+    // can write the complete user → tool* → model bundle to
+    // Firestore in one go at the end, without depending on React
+    // state batching.
+    const turnsAccum = [...next]
 
     try {
       // onToolCall fires once per tool the model invokes. We push a
@@ -141,10 +160,25 @@ export default function LootPanel({ onClose }) {
       // scrolling back later to see what LOOT actually did.
       const reply = await chatWithLoot(next, {
         onToolCall: ({ name, args }) => {
-          setHistory((prev) => [...prev, { role: 'tool', name, args }])
+          const toolTurn = { role: 'tool', name, args, timestampMs: Date.now() }
+          setHistory((prev) => [...prev, toolTurn])
+          turnsAccum.push(toolTurn)
         }
       })
-      setHistory((prev) => [...prev, { role: 'model', text: reply }])
+      const modelTurn = { role: 'model', text: reply, timestampMs: Date.now() }
+      setHistory((prev) => [...prev, modelTurn])
+      turnsAccum.push(modelTurn)
+
+      // Persist this turn to Firestore (ITEM 9c.1a). Non-fatal —
+      // chat keeps working if the log write fails.
+      logLootSession({
+        sessionId       : sessionIdRef.current,
+        user,
+        tenantClaim,
+        audience        : 'admin',
+        history         : turnsAccum,
+        sessionStartFlag: sessionStartFlagRef.current
+      })
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[LOOT] chat error', err)
