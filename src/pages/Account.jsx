@@ -42,7 +42,7 @@ import styles                                  from './Account.module.css'
  */
 export default function Account() {
 
-  const { user } = useAuth()
+  const { user, updateDisplayName } = useAuth()
 
   const [children,    setChildren]    = useState([])
   const [avatars,     setAvatars]     = useState([])
@@ -53,6 +53,20 @@ export default function Account() {
   const [editingId,   setEditingId]   = useState(null)
   const [saving,      setSaving]      = useState(false)
   const [saveError,   setSaveError]   = useState(null)
+
+  // ── PROFILE EDIT STATE ──
+  // Inline edit-in-place on the account header. Kept simple: just
+  // displayName for v1 — photoURL upload + email change can come
+  // later if/when the need arises. Save fires AuthContext's
+  // updateDisplayName, which calls updateProfile + sets local user
+  // state; the profile-mirror useEffect downstream of that writes
+  // the new lastModified to Firestore + archives the previous one
+  // to the lastModifieds subcollection.
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [draftName,      setDraftName]      = useState('')
+  const [profileSaving,  setProfileSaving]  = useState(false)
+  const [profileError,   setProfileError]   = useState(null)
+  const [profileSaved,   setProfileSaved]   = useState(false)
 
   // Live subscription to this parent's children at
   // /{tenant}/_main/users/{uid}/children. tenantCollection() accepts path
@@ -166,6 +180,35 @@ export default function Account() {
     }
   }
 
+  // ── Profile edit ──
+  const startEditProfile = () => {
+    setDraftName(user?.displayName || '')
+    setProfileError(null)
+    setProfileSaved(false)
+    setEditingProfile(true)
+  }
+  const cancelEditProfile = () => {
+    setEditingProfile(false)
+    setProfileError(null)
+  }
+  const saveProfile = async () => {
+    setProfileSaving(true)
+    setProfileError(null)
+    setProfileSaved(false)
+    try {
+      await updateDisplayName(draftName)
+      setEditingProfile(false)
+      setProfileSaved(true)
+      // Auto-hide the "saved" pill after a few seconds so it doesn't
+      // linger and confuse future visits to the page.
+      setTimeout(() => setProfileSaved(false), 3000)
+    } catch (e) {
+      setProfileError(e.message || String(e))
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
   // ── Delete ──
   const handleDelete = async (child) => {
     if (!user) return
@@ -205,6 +248,83 @@ export default function Account() {
           framework.
         </p>
       </header>
+
+      {/* ── YOUR PROFILE ── */}
+      <section className={styles.profileCard}>
+        <div className={styles.profileHead}>
+          <p className={styles.profileEyebrow}>Your profile</p>
+          {profileSaved ? (
+            <span className={styles.profileSaved}>Saved ✓</span>
+          ) : null}
+        </div>
+
+        {editingProfile ? (
+          <div className={styles.profileForm}>
+            <label htmlFor="profile-display-name" className={styles.profileLabel}>
+              Display name
+            </label>
+            <input
+              id          ="profile-display-name"
+              type        ="text"
+              maxLength   ={80}
+              value       ={draftName}
+              onChange    ={(e) => setDraftName(e.target.value)}
+              disabled    ={profileSaving}
+              className   ={styles.profileInput}
+              autoFocus
+            />
+            <p className={styles.profileHelp}>
+              This is the name we greet you with and what the librarian sees on
+              your kids&apos; profiles. Just your first name is fine.
+            </p>
+            {profileError ? (
+              <p className={styles.profileError}>{profileError}</p>
+            ) : null}
+            <div className={styles.profileActions}>
+              <button
+                type      ="button"
+                className ="btn btn-primary"
+                onClick   ={saveProfile}
+                disabled  ={profileSaving || !draftName.trim()}
+              >
+                {profileSaving ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                type      ="button"
+                className ="btn btn-ghost"
+                onClick   ={cancelEditProfile}
+                disabled  ={profileSaving}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.profileView}>
+            <div className={styles.profileFields}>
+              <p className={styles.profileLine}>
+                <span className={styles.profileKey}>Name:</span>{' '}
+                <span className={styles.profileValue}>
+                  {user?.displayName || <em className={styles.profilePlaceholder}>(not set)</em>}
+                </span>
+              </p>
+              <p className={styles.profileLine}>
+                <span className={styles.profileKey}>Email:</span>{' '}
+                <span className={styles.profileValue}>
+                  {user?.email || <em className={styles.profilePlaceholder}>(none)</em>}
+                </span>
+              </p>
+            </div>
+            <button
+              type      ="button"
+              className ="btn btn-ghost"
+              onClick   ={startEditProfile}
+            >
+              Edit name
+            </button>
+          </div>
+        )}
+      </section>
 
       {/* ── ADD / EDIT FORM ── */}
       {showForm ? (

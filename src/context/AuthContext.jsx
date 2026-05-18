@@ -218,30 +218,72 @@ export function AuthProvider({ children }) {
           current.photoURL    !== wanted.photoURL    ||
           current.email       !== wanted.email
         )
+        // Pre-9c.2 docs (and any doc the bootstrap function created
+        // before the mirror started writing lastModified) won't have
+        // a `lastModified` field yet. Seed one on first encounter so
+        // every doc has at least the audit shape, even when no actual
+        // profile fields have drifted.
+        const needsInitialLastModified = !current.lastModified
+
         const lastSeenMs = current.lastSeenAt && current.lastSeenAt.toMillis
           ? current.lastSeenAt.toMillis()
           : 0
         const lastSeenStale = (Date.now() - lastSeenMs) >= LAST_SEEN_REFRESH_MS
 
-        if (!profileChanged && !lastSeenStale) return
+        const shouldUpdateAudit = profileChanged || needsInitialLastModified
+        if (!shouldUpdateAudit && !lastSeenStale) return
 
         // Build the doc update. Always bump lastSeenAt (activity).
-        // Only bump lastModified when fields actually changed — and
-        // when we do bump it, archive the previous value to the
-        // /lastModifieds subcollection in the same batch so we never
-        // lose history if the main write fails.
+        // Bump lastModified when fields changed OR when this is the
+        // first time we're seeding the audit field. Archive the
+        // previous lastModified value (if any) to the /lastModifieds
+        // subcollection in the same batch so accountability history
+        // survives a partial-failure scenario.
         const batch = writeBatch(db)
 
-        if (profileChanged) {
+        if (shouldUpdateAudit) {
+          // Build the per-field change diff. 'created' state captures the
+          // genesis baseline so `changes` stays empty; 'updated' state
+          // records each field that drifted with previous + current
+          // values for the admin audit viewer.
+          const changes = []
+          if (!needsInitialLastModified) {
+            if (current.displayName !== wanted.displayName) {
+              changes.push({
+                field   : 'displayName',
+                previous: current.displayName ?? null,
+                current : wanted.displayName  ?? null
+              })
+            }
+            if (current.photoURL !== wanted.photoURL) {
+              changes.push({
+                field   : 'photoURL',
+                previous: current.photoURL ?? null,
+                current : wanted.photoURL  ?? null
+              })
+            }
+            if (current.email !== wanted.email) {
+              changes.push({
+                field   : 'email',
+                previous: current.email ?? null,
+                current : wanted.email  ?? null
+              })
+            }
+          }
+
           const newLastModified = new LastModified({
-            byName: user.displayName || user.email || '(unknown)',
-            byUUID: user.uid,
-            date  : serverTimestamp(),
-            state : 'updated'
+            byName : user.displayName || user.email || '(unknown)',
+            byUUID : user.uid,
+            date   : serverTimestamp(),
+            // 'created' on the very first mirror encounter — we're
+            // initializing the audit field for an existing doc, not
+            // describing a data change. 'updated' otherwise.
+            state  : needsInitialLastModified ? 'created' : 'updated',
+            changes
           }).toDict()
 
           // Archive the previous lastModified BEFORE we overwrite it.
-          // First-ever mirror has no previous value — skip the archive.
+          // First-ever mirror has nothing to archive — skip the write.
           if (current.lastModified) {
             const archiveRef = doc(collection(userRef, 'lastModifieds'))
             batch.set(archiveRef, current.lastModified)
@@ -322,6 +364,53 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  /**
+   * Update the signed-in user's displayName in Firebase Auth.
+   *
+   * Trims the input, validates non-empty + reasonable length, calls
+   * `updateProfile`, reloads the auth user, and bumps local state so
+   * the profile-mirror useEffect picks up the change and writes a new
+   * lastModified to Firestore (with the previous one archived to the
+   * lastModifieds subcollection).
+   *
+   * Surfaces the same readable errors the sign-in methods do via
+   * setError, and re-throws so the caller's catch can also react.
+   *
+   * @param   {string} newName
+   * @returns {Promise<void>}
+   */
+  const updateDisplayName = useCallback(async (newName) => {
+    setError(null)
+    if (!auth.currentUser) {
+      const msg = 'You need to be signed in to update your profile.'
+      setError(msg)
+      throw new Error(msg)
+    }
+    const trimmed = (newName || '').trim()
+    if (!trimmed) {
+      const msg = 'Name can\'t be empty.'
+      setError(msg)
+      throw new Error(msg)
+    }
+    if (trimmed.length > 80) {
+      const msg = 'Name is too long (80 character max).'
+      setError(msg)
+      throw new Error(msg)
+    }
+    try {
+      await updateProfile(auth.currentUser, { displayName: trimmed })
+      await auth.currentUser.reload()
+      // onAuthStateChanged doesn't re-fire for updateProfile, so we
+      // manually shallow-clone the auth user so the mirror useEffect
+      // sees a new reference and detects the displayName drift.
+      setUser({ ...auth.currentUser })
+    } catch (e) {
+      const msg = readableAuthError(e)
+      setError(msg)
+      throw new Error(msg)
+    }
+  }, [])
+
   const signOut = useCallback(async () => {
     setError(null)
     try {
@@ -351,9 +440,10 @@ export function AuthProvider({ children }) {
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
+    updateDisplayName,
     signOut,
     clearError
-  }), [user, claims, loading, error, isAdmin, tenantClaim, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, clearError])
+  }), [user, claims, loading, error, isAdmin, tenantClaim, signInWithGoogle, signInWithEmail, signUpWithEmail, updateDisplayName, signOut, clearError])
 
   return (
     <AuthContext.Provider value={value}>
@@ -368,7 +458,7 @@ export function AuthProvider({ children }) {
  *
  * @returns {Object} { user, claims, loading, error, isAdmin, tenantClaim,
  *                     signInWithGoogle, signInWithEmail, signUpWithEmail,
- *                     signOut, clearError }
+ *                     updateDisplayName, signOut, clearError }
  */
 export function useAuth() {
 

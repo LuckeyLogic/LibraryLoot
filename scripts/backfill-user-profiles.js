@@ -119,20 +119,46 @@ async function main() {
 
       const docData = snap.data();
       const diff = diffProfile(userRecord, docData);
-      if (!diff) {
+
+      // Pre-9c.2 docs (created before the mirror existed) won't have
+      // a lastModified field. Seed one on first encounter even when
+      // no profile fields have drifted so every existing doc gets
+      // an audit shape after backfill runs.
+      const needsInitialLastModified = !docData.lastModified;
+
+      if (!diff && !needsInitialLastModified) {
         unchanged++;
         continue;
       }
 
-      // Build the new lastModified summary attributing the change to
-      // this script (not the user). Archive the previous lastModified
-      // (if any) to the lastModifieds subcollection in the same batch
-      // so the accountability trail is complete.
+      // Build per-field change diff. Empty for 'created' (genesis
+      // baseline). For 'updated', list each mirrored field that
+      // differs between Auth and Firestore.
+      const changes = [];
+      if (!needsInitialLastModified && diff) {
+        const wanted = {
+          displayName: userRecord.displayName || null,
+          photoURL   : userRecord.photoURL    || null,
+          email      : userRecord.email       || null
+        };
+        ["displayName", "photoURL", "email"].forEach((field) => {
+          const prev = docData[field] == null ? null : docData[field];
+          const next = wanted[field]   == null ? null : wanted[field];
+          if (prev !== next) {
+            changes.push({field, previous: prev, current: next});
+          }
+        });
+      }
+
+      // Build the lastModified summary attributing the change to this
+      // script (not the user). 'created' state when seeding an initial
+      // value on an existing doc; 'updated' when correcting drift.
       const newLastModified = {
-        byName: "backfill-user-profiles.js",
-        byUUID: "system",
-        date  : admin.firestore.FieldValue.serverTimestamp(),
-        state : "updated"
+        byName : "backfill-user-profiles.js",
+        byUUID : "system",
+        date   : admin.firestore.FieldValue.serverTimestamp(),
+        state  : needsInitialLastModified ? "created" : "updated",
+        changes
       };
 
       const batch = db.batch();
@@ -143,7 +169,7 @@ async function main() {
       }
 
       batch.set(userRef, {
-        ...diff,
+        ...(diff || {}),
         lastSeenAt  : admin.firestore.FieldValue.serverTimestamp(),
         lastModified: newLastModified
       }, { merge: true });
@@ -151,7 +177,8 @@ async function main() {
       await batch.commit();
 
       updated++;
-      console.log(`  + synced:    ${userRecord.uid}  ${userRecord.displayName || userRecord.email || "(no name)"}`);
+      const tag = diff ? "synced       " : "seeded lastMod";
+      console.log(`  + ${tag}: ${userRecord.uid}  ${userRecord.displayName || userRecord.email || "(no name)"}`);
     }
 
     pageToken = result.pageToken;
