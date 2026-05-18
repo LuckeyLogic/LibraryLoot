@@ -91,9 +91,13 @@
   text-transform: uppercase;
   color         : var(--hud-muted);
   padding       : 0.4rem 0.4rem;
-  max-width     : 12ch;
-  overflow      : hidden;
-  text-overflow : ellipsis;
+  /* `white-space: nowrap` keeps the greeting on a single line on
+     desktop. We deliberately don't truncate or cap the width here —
+     the upstream `greeting()` helper in Navbar.jsx already collapses
+     long values (full email, full display name) to a single first
+     name or email-local-part, so the longest realistic render is
+     "HI, <FIRSTNAME>" — fine for one nav slot. An earlier 12ch cap
+     was clipping "HI, MIGUEL" to "HI, MI..." in production. */
   white-space   : nowrap;
 }
 

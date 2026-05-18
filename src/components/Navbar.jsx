@@ -6,8 +6,8 @@
 // Created by Miguel Brown on 5/12/26.
 // Copyright (c) 2026 Luckey Logic LLC. All rights reserved.
 
-import React, { useState }    from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import React, { useEffect, useRef, useState } from 'react'
+import { Link, NavLink, useNavigate }         from 'react-router-dom'
 
 import { useAuth }            from '../context/AuthContext.jsx'
 
@@ -37,7 +37,40 @@ export default function Navbar() {
   const navigate                   = useNavigate()
   const [open, setOpen]            = useState(false)
 
+  // Refs for outside-tap dismiss. The nav element is the dropdown
+  // panel itself; the toggle is the hamburger button. A pointerdown
+  // outside both should close the menu. We deliberately let taps
+  // INSIDE the panel pass through — closing on internal taps would
+  // break things like the future "expand a submenu" or "tap inside
+  // the panel without choosing a link."
+  const navRef                     = useRef(null)
+  const toggleRef                  = useRef(null)
+
   const closeMenu = () => setOpen(false)
+
+  // Outside-tap + Escape dismiss for the mobile menu. Only active
+  // when the menu is open — avoids burning event handlers in the
+  // common closed-state.
+  useEffect(() => {
+    if (!open) return
+
+    function handlePointerDown(e) {
+      const inNav    = navRef.current    && navRef.current.contains(e.target)
+      const inToggle = toggleRef.current && toggleRef.current.contains(e.target)
+      if (!inNav && !inToggle) setOpen(false)
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown',     handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown',     handleKeyDown)
+    }
+  }, [open])
 
   const handleSignOut = async () => {
     closeMenu()
@@ -73,18 +106,22 @@ export default function Navbar() {
         </Link>
 
         <button
-          type="button"
-          className={styles.toggle}
-          aria-label="Toggle navigation menu"
+          ref          ={toggleRef}
+          type         ="button"
+          className    ={styles.toggle}
+          aria-label   ="Toggle navigation menu"
           aria-expanded={open}
-          onClick={() => setOpen(prev => !prev)}
+          onClick      ={() => setOpen(prev => !prev)}
         >
           <span className={styles.toggleBar} />
           <span className={styles.toggleBar} />
           <span className={styles.toggleBar} />
         </button>
 
-        <nav className={`${styles.links} ${open ? styles.linksOpen : ''}`}>
+        <nav
+          ref       ={navRef}
+          className ={`${styles.links} ${open ? styles.linksOpen : ''}`}
+        >
           {links.map(({ to, label }) => (
             <NavLink
               key       ={to}
