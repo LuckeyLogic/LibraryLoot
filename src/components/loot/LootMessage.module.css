@@ -62,6 +62,104 @@
   white-space: pre-wrap;
 }
 
+/* ── MARKDOWN INSIDE BUBBLE ───────────────────────────────────────
+   Gemini writes in markdown by default — **bold**, *italic*, lists,
+   inline `code`, code blocks, links. ReactMarkdown turns those into
+   real DOM elements; the rules below make them read well in the
+   tight bubble layout. Default browser margins on p/ul/ol/pre are
+   too aggressive for chat bubbles — we collapse them. */
+
+.markdown { line-height: 1.55; }
+
+.markdown > *:first-child { margin-top   : 0; }
+.markdown > *:last-child  { margin-bottom: 0; }
+
+.markdown p {
+  margin     : 0 0 8px 0;
+  white-space: pre-wrap;
+}
+.markdown p:last-child { margin-bottom: 0; }
+
+.markdown strong { font-weight: 700; color: var(--loot-gold-bright); }
+.markdown em     { font-style : italic; color: inherit; }
+
+.markdown ul, .markdown ol {
+  margin     : 4px 0 8px 0;
+  padding-left: 20px;
+}
+.markdown li      { margin: 2px 0; }
+.markdown li > p  { margin: 0; }  /* GFM wraps li content in p — flatten */
+
+.markdown a {
+  color          : var(--loot-gold-bright);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break     : break-word;
+}
+.markdown a:hover { color: var(--hud-cyan); }
+
+.markdown blockquote {
+  margin       : 6px 0;
+  padding      : 4px 10px;
+  border-left  : 3px solid var(--neon-purple);
+  color        : var(--hud-muted);
+  font-style   : italic;
+}
+
+.markdown hr {
+  margin    : 10px 0;
+  border    : none;
+  border-top: 1px solid rgba(157, 78, 221, 0.3);
+}
+
+.inlineCode {
+  background    : rgba(157, 78, 221, 0.18);
+  border        : 1px solid rgba(157, 78, 221, 0.35);
+  border-radius : 4px;
+  padding       : 1px 5px;
+  font-family   : var(--font-mono, 'JetBrains Mono', monospace);
+  font-size     : 0.85em;
+  color         : var(--hud-cyan);
+  word-break    : break-word;
+}
+
+.codeBlock {
+  margin       : 6px 0;
+  padding      : 8px 10px;
+  background   : rgba(13, 10, 31, 0.7);
+  border       : 1px solid rgba(157, 78, 221, 0.3);
+  border-radius: 6px;
+  overflow-x   : auto;
+  font-family  : var(--font-mono, 'JetBrains Mono', monospace);
+  font-size    : 0.78rem;
+  line-height  : 1.45;
+}
+.codeBlock code { background: none; border: none; padding: 0; color: var(--hud-white); }
+
+/* GFM tables — narrow chat bubbles can't fit wide tables, but a
+   small lookup-results table from LOOT might. Make them at least
+   readable and scrollable on overflow. */
+.markdown table {
+  border-collapse: collapse;
+  margin         : 6px 0;
+  font-size      : 0.82rem;
+  display        : block;
+  overflow-x     : auto;
+  max-width      : 100%;
+}
+.markdown th, .markdown td {
+  border        : 1px solid rgba(157, 78, 221, 0.3);
+  padding       : 4px 8px;
+  text-align    : left;
+}
+.markdown th { background: rgba(157, 78, 221, 0.15); color: var(--loot-gold-bright); }
+
+/* GFM task-list checkboxes — kid-friendly visual */
+.markdown input[type="checkbox"] {
+  margin-right: 6px;
+  accent-color: var(--loot-gold-bright);
+}
+
 /* ── THINKING DOTS ─────────────────────────────────────────────── */
 .thinking {
   display    : inline-flex;
