@@ -133,7 +133,17 @@ export default function LootPanel({ onClose }) {
     setError(null)
 
     try {
-      const reply = await chatWithLoot(next)
+      // onToolCall fires once per tool the model invokes. We push a
+      // 'tool' entry into history so LootMessage renders a chip
+      // ("📖 Looking up ISBN 9780062074324") inline with the
+      // conversation. Chips persist in sessionStorage with the rest
+      // of the history so they survive a refresh — useful when
+      // scrolling back later to see what LOOT actually did.
+      const reply = await chatWithLoot(next, {
+        onToolCall: ({ name, args }) => {
+          setHistory((prev) => [...prev, { role: 'tool', name, args }])
+        }
+      })
       setHistory((prev) => [...prev, { role: 'model', text: reply }])
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -142,8 +152,15 @@ export default function LootPanel({ onClose }) {
         err?.message ||
         'LOOT couldn\'t reach the model. Check your connection and try again.'
       )
-      // Roll the user message back so they can retry without re-typing.
-      setHistory((prev) => prev.slice(0, -1))
+      // Roll everything added during this turn back so the user can
+      // retry without re-typing. Find the index of the user message
+      // we appended (`next`'s last entry was the user text); slice
+      // history down to before that. Any tool chips added between
+      // the user message and the failure get rolled back with it,
+      // which is what we want — a half-finished tool chain on screen
+      // would be confusing.
+      const rollbackLen = next.length - 1
+      setHistory((prev) => prev.slice(0, rollbackLen))
       setDraft(text)
     } finally {
       setSending(false)
@@ -230,7 +247,13 @@ export default function LootPanel({ onClose }) {
           </div>
         ) : (
           history.map((m, i) => (
-            <LootMessage key={i} role={m.role} text={m.text} />
+            <LootMessage
+              key  ={i}
+              role ={m.role}
+              text ={m.text}
+              name ={m.name}
+              args ={m.args}
+            />
           ))
         )}
 

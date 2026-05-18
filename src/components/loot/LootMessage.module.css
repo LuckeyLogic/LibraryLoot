@@ -5,8 +5,34 @@
   width  : 100%;
 }
 
-.rowUser  { justify-content: flex-end;   }
-.rowModel { justify-content: flex-start; }
+.rowUser  { justify-content: flex-end;    }
+.rowModel { justify-content: flex-start;  }
+.rowTool  { justify-content: center;      }
+
+/* ── TOOL-CALL CHIP ───────────────────────────────────────────────
+   Centered pill, dashed gold border, smaller font — reads as a
+   status note ("LOOT is doing something") rather than another voice
+   in the conversation. Persists in chat history alongside bubbles so
+   the user can scroll back and see what LOOT actually called. */
+.toolChip {
+  display       : inline-flex;
+  align-items   : center;
+  gap           : 8px;
+  padding       : 5px 12px;
+  background    : rgba(255, 182, 39, 0.08);
+  border        : 1px dashed var(--gold-border-strong, rgba(255,182,39,0.5));
+  border-radius : 999px;
+  font-family   : var(--font-body);
+  font-size     : 0.78rem;
+  letter-spacing: 0.02em;
+  color         : var(--loot-gold-bright);
+  max-width     : 86%;
+  word-wrap     : break-word;
+  overflow-wrap : anywhere;
+}
+
+.toolEmoji { line-height: 1; font-size: 0.95rem; }
+.toolLabel { line-height: 1.3; }
 
 .bubble {
   max-width   : 86%;

@@ -13,16 +13,30 @@
 // tool calling. Gemini 2.0 Flash + Flash-Lite shut down 2026-06-01 —
 // don't pin to those.
 //
-// Tools: none in 9b — chat only. ITEM 9c wires the first tools
-// (`lookupBookByIsbn`, `searchBooksByTitle`) once the chat plumbing is
-// verified working end-to-end.
+// Tools (ITEM 9c — wired): book lookup by ISBN, title search, and
+// "is this in our catalog?" check. See ./lootTools.js for the schema
+// declarations and implementations. The tool-call loop below executes
+// any functionCalls the model emits, sends the results back, and
+// repeats up to MAX_TOOL_ROUNDS before bailing — prevents runaway
+// loops without hampering legit multi-step tool usage.
 //
 // Created by Miguel Brown on 5/15/26.
 // Copyright (c) 2026 Luckey Logic LLC. All rights reserved.
 
 import { getAI, getGenerativeModel, VertexAIBackend } from 'firebase/ai'
 
-import app from '../../firebase.js'
+import app                              from '../../firebase.js'
+
+import { lootToolDeclarations,
+         lootToolImplementations }       from './lootTools.js'
+
+// Cap on tool-call rounds within a single user turn. Each round = the
+// model emits N function calls, we execute them, send results back, and
+// the model either emits more calls or produces a final text response.
+// 10 is generous for legit multi-step lookups (search → confirm →
+// catalog-check) while still stopping pathological loops dead. If we
+// observe runaway behavior in conversation logs (ITEM 9c.1), dial down.
+const MAX_TOOL_ROUNDS = 10
 
 // ── SYSTEM PROMPT ─────────────────────────────────────────────────────
 //
@@ -69,10 +83,31 @@ WHAT'S OUT OF SCOPE — refuse only when a request is clearly off-program:
 For those, respond briefly: "Not my loot drop — try Google. What can
 I help with on Library Loot?"
 
-You currently have no tools wired up — you can't add books, lookup ISBNs,
-or send emails yourself yet. Those land in the next build. If a librarian
-asks you to DO something action-y, say tools are coming next round and
-ask what they're trying to accomplish so you can advise in the meantime.
+TOOLS AVAILABLE — use them confidently when relevant. Don't ask
+permission ("Do you want me to look that up?") — just call the tool
+and report the answer. If a tool returns { error: ... }, explain the
+error to the user plainly in one sentence; don't pretend the tool
+worked.
+
+  - lookupBookByIsbn(isbn): Book metadata from the wider web (Open
+    Library + Google Books). Use when the user gives you an ISBN.
+  - searchBooksByTitle(title): Up to 5 web matches for a title query.
+    Use when the user names a book without an ISBN — then read the
+    matches back and ask which one they mean if there's ambiguity.
+  - isBookInCatalog(isbn): Checks whether an ISBN is in THIS tenant's
+    catalog (different from lookupBookByIsbn — that's the wider web).
+    Use to answer "is X in our catalog?" / "did I add Y?" questions.
+
+Common flow: user names a book ("Is Steam Train Dream Train in our
+catalog?"). Step 1: searchBooksByTitle to find the right ISBN.
+Step 2: confirm with user if multiple matches. Step 3: isBookInCatalog
+on the confirmed ISBN. Step 4: report the result.
+
+You do NOT yet have tools for: adding books to the catalog, editing
+tenant settings, sending sponsor emails, triggering prize draws. Those
+arrive in later builds. If asked to DO one of those, say "I can't do
+that yet — that tool's coming in a later build. Want me to walk you
+through it manually?"
 
 GROUND TRUTH — how Library Loot actually works. Don't invent mechanics.
 If a question lands outside what's documented here AND you don't have a
@@ -131,37 +166,110 @@ const ai = getAI(app, { backend: new VertexAIBackend() })
  */
 const model = getGenerativeModel(ai, {
   model            : 'gemini-2.5-flash',
-  systemInstruction: SYSTEM_PROMPT
+  systemInstruction: SYSTEM_PROMPT,
+  tools            : [{ functionDeclarations: lootToolDeclarations }]
 })
 
 // ── PUBLIC API ────────────────────────────────────────────────────────
 
 /**
  * Send a conversation to LOOT and return the next assistant message.
+ * Handles multi-turn tool calling internally: if the model emits
+ * function calls, executes them via lootToolImplementations, sends
+ * results back, and repeats until the model produces a final text
+ * response or the loop cap is hit.
  *
- * @param {Array<{role: 'user'|'model', text: string}>} history
- *        Conversation so far, oldest first. Caller maintains the
- *        history; we don't persist server-side in 9b.
- * @returns {Promise<string>} The model's next message text.
+ * History uses our flat shape (`{role, text}`) plus an additional
+ * `tool` role for chip rendering — `tool` entries are NOT sent to the
+ * model (Gemini reconstructs its own tool-call history from the SDK
+ * chat session); they exist purely for the UI layer to render chips
+ * inline with the conversation. Filtering them out before sending to
+ * the SDK keeps the model's view of history clean.
+ *
+ * @param {Array<{role: string, text?: string, name?: string, args?: Object}>} history
+ *        Conversation so far, oldest first.
+ * @param {Object} [options]
+ * @param {Function} [options.onToolCall]
+ *        Optional callback fired when the model emits a function
+ *        call, BEFORE the tool runs. Receives `{name, args}`. Lets
+ *        the UI push a chip into its rendered history in real time.
+ * @returns {Promise<string>} The model's final text response.
  */
-export async function chatWithLoot(history) {
+export async function chatWithLoot(history, options = {}) {
   if (!Array.isArray(history) || history.length === 0) {
     throw new Error('chatWithLoot: history must be a non-empty array')
   }
+  const onToolCall = typeof options.onToolCall === 'function'
+    ? options.onToolCall
+    : null
 
-  // The SDK expects {role, parts: [{text}]} — translate from our flatter
-  // shape so the rest of the app doesn't import SDK types.
-  const sdkHistory = history.slice(0, -1).map((m) => ({
+  // Strip tool entries — they're UI sugar, not part of the model's
+  // conversation memory. The SDK's chat session tracks tool calls /
+  // responses internally; we just keep user + model text turns here.
+  const textOnly = history.filter((m) => m.role === 'user' || m.role === 'model')
+
+  const sdkHistory = textOnly.slice(0, -1).map((m) => ({
     role : m.role,
     parts: [{ text: m.text }]
   }))
-  const latest    = history[history.length - 1]
-
-  if (latest.role !== 'user') {
-    throw new Error('chatWithLoot: last message must be from the user')
+  const latest = textOnly[textOnly.length - 1]
+  if (!latest || latest.role !== 'user') {
+    throw new Error('chatWithLoot: last text turn must be from the user')
   }
 
   const chat = model.startChat({ history: sdkHistory })
-  const res  = await chat.sendMessage(latest.text)
-  return res.response.text()
+
+  // First send: the user's message.
+  let result = await chat.sendMessage(latest.text)
+
+  // Tool-call loop. Each iteration: check for function calls in the
+  // latest response. If present, execute them, send the function
+  // responses back, and let the model continue. If no function calls,
+  // we've reached a final text response — break out.
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const fnCalls = typeof result.response.functionCalls === 'function'
+      ? result.response.functionCalls()
+      : null
+
+    if (!fnCalls || fnCalls.length === 0) {
+      return result.response.text()
+    }
+
+    // Execute every function call in this round in parallel; the SDK
+    // expects a single sendMessage with an array of functionResponse
+    // parts. Notify the UI BEFORE each tool starts so the chip
+    // appears while the user waits.
+    const fnResponses = await Promise.all(fnCalls.map(async (call) => {
+      const name = call.name
+      const args = call.args || {}
+      if (onToolCall) {
+        try { onToolCall({ name, args }) } catch (_e) { /* ignore UI errors */ }
+      }
+      const impl = lootToolImplementations[name]
+      let response
+      if (!impl) {
+        response = { error: `Unknown tool: ${name}` }
+      } else {
+        response = await impl(args)  // impls never throw — always return data or {error}
+      }
+      return {
+        functionResponse: {
+          name,
+          response
+        }
+      }
+    }))
+
+    result = await chat.sendMessage(fnResponses)
+  }
+
+  // Loop cap hit. Return whatever text the model produced (may be
+  // empty if it was still mid-tool-call); fall back to a friendly
+  // hedge so the user isn't left with a blank message.
+  const finalText = result.response.text()
+  if (finalText && finalText.trim()) return finalText
+  return (
+    "I got stuck in a lookup loop on this one — try rephrasing? " +
+    "(If this keeps happening, ping Miguel — it might mean I need a new tool.)"
+  )
 }
