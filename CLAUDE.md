@@ -1,7 +1,7 @@
 # Library Loot — Claude Code Project Guide
 > **Library Loot | Community-funded reading rewards for libraries**
 > Developed by **Luckey Logic LLC** | © 2026 Luckey Logic LLC
-> Last updated: 2026-05-12
+> Last updated: 2026-05-19
 
 ---
 
@@ -664,9 +664,35 @@ Audience labels: 'admin' for now. 'parent' / 'anon' arrive in 9f / 9g and will u
 
 Miguel surfaced this need on 2026-05-15 during 9b verification, after spotting LOOT confidently hallucinating a "ticket-based prize draw" mechanic that doesn't exist. The weekly digest (9c.1b) will help catch those hallucinations early before they shape an admin's mental model of how the platform works.
 
-#### [ ] ITEM 9c.3 — LOOT web-search tool (close the GUNNY capability gap)
+#### [✅] ITEM 9c.3 — LOOT web-search tool (close the GUNNY capability gap)
 
 Surfaced 2026-05-15. Miguel asked LOOT for a real book summary and a working cover URL; LOOT couldn't do either because we only gave it `lookupBookByIsbn` / `searchBooksByTitle` / `isBookInCatalog` / `searchCatalog`. None of those reach the broader web. Meanwhile Claude Chat (Anthropic, browser tool) answered the same question in 30 seconds with a high-quality summary, source-cited, no hallucination.
+
+**Shipped 2026-05-19.** Two new HTTPS-callable Cloud Functions plus the matching LOOT tools:
+
+- `functions/src/lootWebSearch.js` — Brave Search API, admin-claim required, 50 searches per UID per day, safesearch=strict (kids' reading program). Brave key via `defineSecret('BRAVE_SEARCH_API_KEY')` — never in source. Quota lives in a server-only `/_loot_meta/{tenant_uid_date}` doc updated in a transaction.
+- `functions/src/lootFetchPage.js` — Server-side fetch + `cheerio`-based readable-text extraction (strips script/style/nav/header/footer/aside/forms; picks densest of article/main/[role=main]/body; normalizes whitespace; caps at 10K chars). 24h cache at `/_loot_url_cache/{sha256_url}`. Hard caps: 5MB HTML download, 10s timeout, 100 fetches per UID per day. SSRF defense: refuses non-http(s), blocks localhost / private IP ranges (127.x, 10.x, 192.168.x, 172.16-31.x, 169.254.x, .local, .internal).
+- `firestore.rules` — added deny-all blocks for `_loot_meta` and `_loot_url_cache` (server-only collections, matching the `_setup_tokens` pattern).
+- Client-side `src/lib/loot/lootTools.js` — new `searchWeb({query, count?})` and `fetchPage({url})` tool declarations + implementations + chip display entries (`🌐 Searching the web for "..."`, `📄 Reading <hostname>`).
+- LOOT system prompt — new web-tool guidance, golden-path examples, and a hard CITATION & HONESTY block that requires every web-sourced claim to carry the URL and forbids invention when search turns up nothing.
+
+App Check stays OFF on the new callables to match the rest of `functions/` until the project-wide App Check setup gets cleaned up (separate tracked task).
+
+**Operator next steps for Miguel** (the human; not code):
+1. Sign up for [Brave Search API](https://brave.com/search/api/) — free tier 2000 queries/month, no card.
+2. Set the secret in Firebase Secret Manager: `firebase functions:secrets:set BRAVE_SEARCH_API_KEY`.
+3. Deploy: `firebase deploy --only firestore:rules,functions`.
+4. Try a real prompt in LOOT: "Find a real summary for Steam Train Dream Train — Open Library is giving me garbage." LOOT should call `searchWeb` → `fetchPage` and return a real summary with the source URL cited.
+
+**Unblocks downstream items:**
+- ITEM 3e Tier 3 (AI fallback for cover URLs) can now use `searchWeb` + `fetchPage`.
+- ITEM 3f Tier 3 (AI fallback for summaries) can now use the same.
+- ITEM 9e (admin sponsor review) can verify sponsor businesses through `searchWeb`.
+- ITEM 9g (public LOOT) will reuse this backend with stricter quotas + the token-gate pattern.
+
+---
+
+#### Original design notes (kept for posterity — superseded by the shipped notes above)
 
 **The diagnosis:** this isn't a Gemini-vs-Claude limitation, it's a Library Loot **setup** limitation. Gemini 2.5 Flash supports tool calling just as well as Anthropic Claude; we just didn't wire a web-search tool. GUNNY (MCL Central's Anthropic-based assistant) has access to `web_search` because Anthropic ships that as a built-in tool. Vertex AI doesn't ship one out of the box, so we have to wire it ourselves.
 
@@ -892,6 +918,33 @@ Per-user, in the existing user doc:
 ---
 
 ## 📝 Session Notes
+
+### 2026-05-19 — ITEM 9c.3 (LOOT web-search tool)
+
+- **9c.3 shipped.** Two new Cloud Functions (`lootWebSearch` + `lootFetchPage`), `cheerio` added to `functions/`, deny-all rules for `_loot_meta` + `_loot_url_cache`, two new LOOT tools wired into the model + chip layer, system prompt expanded with web examples and a hard CITATION & HONESTY block. Build clean, lint clean. See the ITEM 9c.3 build-list entry for the full shipped notes + operator deploy steps.
+- **Design choices locked during the build:**
+  - HTML extraction: **cheerio** (CJS-compatible, lightweight, no jsdom dependency). Mozilla Readability would give better quality on news articles, but linkedom is ESM-only and jsdom is ~10MB; cheerio's manual extraction is good enough for v1 and ships in minutes instead of hours.
+  - App Check: **OFF on the new callables**, matching the existing pattern. The platform-wide App Check provider config still needs cleanup before launch; enforcing on these two in isolation would block dev. Once App Check is healthy, flip `enforceAppCheck: true` on both `onCall` configs.
+  - Rate limits: **50 web searches + 100 page fetches per UID per day.** Counters live in the same `/_loot_meta/{tenant_uid_date}` doc, incremented in a Firestore transaction so concurrent calls can't race past the cap.
+  - URL cache: **24h, keyed by SHA-256 of the canonical URL.** Old docs sit until manually cleaned; future TTL policy could automate that.
+  - Safesearch: **strict.** Library Loot is a kids' reading program — we never want LOOT surfacing adult content even if an admin's query lands borderline.
+- **SSRF defense.** `lootFetchPage` rejects non-http(s) schemes and blocks the obvious private-network targets (localhost, 127.x, 10.x, 192.168.x, 172.16-31.x, 169.254.x, .local, .internal). Not a complete defense — DNS rebinding could in principle still slip through — but it stops the accidental + trivially-malicious cases. Worth revisiting if/when public LOOT (9g) lands.
+- **The "never invent" guardrail.** New `CITATION & HONESTY` block in the system prompt: every web-sourced claim MUST carry the URL inline; if searches genuinely turn up nothing, LOOT says so and asks for a different query — it doesn't make something up. This is the same hallucination-resistance discipline Miguel surfaced when LOOT confidently invented a "ticket-based prize draw" in 9b.
+- **Operator pending work (Miguel, when you have a minute):**
+  - Sign up for Brave Search API → grab the key.
+  - `firebase functions:secrets:set BRAVE_SEARCH_API_KEY`
+  - `firebase deploy --only firestore:rules,functions`
+  - First real prompt to verify end-to-end: "Find a real summary for Steam Train Dream Train — Open Library is giving me garbage."
+- **Other pending items from the previous session still open:**
+  - Re-run `scripts/refresh-book-metadata.js` after deeper-chain enrichment landed in 3d so existing books pick up the richer series + works-endpoint subjects.
+  - Manually curate Kristy and the Snobs (set series "The Baby-Sitters Club Graphix" #10; replace NYT-tag subjects with curated ones).
+  - App Check provider config cleanup (separate from this item; tracked above).
+- **Next session candidates** (in order of impact-per-hour now that 9c.3 has unblocked the AI fallbacks):
+  - **3g** — Filter catalog-system garbage out of `dedupeSubjects()` (smallest cleanest win, no new deps).
+  - **3e Tier 1 + 3f Tier 1** — Heuristics in `bookLookup.js` (URL validity check + summary placeholder detection). Batchable.
+  - **3e Tier 2 + 3f Tier 2** — "Try next source" cycle buttons in AdminBooks. Same shape; batchable.
+  - **3e Tier 3 + 3f Tier 3** — "Ask AI to find one" buttons that call into the now-shipped `searchWeb` / `fetchPage` tools.
+  - **9c.1b** — Weekly insights Cloud Function (next natural continuation of the conversation-logging work).
 
 ### 2026-05-15 — ITEM 9a + 9b
 

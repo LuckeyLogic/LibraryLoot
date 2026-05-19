@@ -72,6 +72,21 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ── LOOT META (per-UID quotas for web search + page fetch) ──
+    // Server-only. Cloud Functions (lootWebSearch / lootFetchPage)
+    // write these via Admin SDK; no client should ever read or write
+    // them. ITEM 9c.3.
+    match /_loot_meta/{quotaId} {
+      allow read, write: if false;
+    }
+
+    // ── LOOT URL CACHE (24h server-side cache for fetchPage) ──
+    // Server-only. Cached page text keyed by SHA-256 of the requested
+    // URL. ITEM 9c.3.
+    match /_loot_url_cache/{urlHash} {
+      allow read, write: if false;
+    }
+
     // ── TENANT SETTINGS ──
     // Public-read by design — the doc contains operator contact info,
     // legal supplements, and tenant branding that surface on the

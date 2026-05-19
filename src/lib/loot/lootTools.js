@@ -21,11 +21,13 @@
 // Copyright (c) 2026 Luckey Logic LLC. All rights reserved.
 
 import { getDoc, getDocs }              from 'firebase/firestore'
+import { httpsCallable }                 from 'firebase/functions'
 
 import { lookupBookByIsbn,
          searchBooksByTitle }            from '../../utils/bookLookup.js'
 import { normalizeIsbn }                 from '../../utils/isbn.js'
 
+import { functions }                     from '../../firebase.js'
 import { tenantCollection,
          tenantDoc }                     from '../../firebase/tenant.js'
 
@@ -120,6 +122,59 @@ const declarations = [
         quizApproved: { type: 'boolean', description: 'Exact match on quizApproved (true/false).' }
       }
       // No required fields — empty {} lists the whole catalog (capped).
+    }
+  },
+  {
+    name       : 'searchWeb',
+    description:
+      'Search the broader web (via Brave Search) for general info — book ' +
+      'summaries, cover candidates, sponsor brand verification, etc. ' +
+      'Returns up to 10 results, each with { title, url, snippet, source }. ' +
+      'Use ONLY for questions the other tools can\'t answer: searchCatalog ' +
+      'handles "what\'s in our catalog?", lookupBookByIsbn / ' +
+      'searchBooksByTitle handle book metadata. searchWeb is for the open ' +
+      'web. When you use this tool, you MUST cite the URL of the source ' +
+      'you rely on in your reply. If no result actually answers the user\'s ' +
+      'question, say so plainly — DO NOT make up details that aren\'t in ' +
+      'a real result.',
+    parameters: {
+      type      : 'object',
+      properties: {
+        query: {
+          type       : 'string',
+          description: 'Search query. Keep it focused — 1-2 lines max.'
+        },
+        count: {
+          type       : 'integer',
+          description: 'How many results to fetch (1-10). Default 5.'
+        }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name       : 'fetchPage',
+    description:
+      'Read the main text content of a specific web page. Use AFTER ' +
+      'searchWeb when the snippet isn\'t enough — pick a result URL and ' +
+      'fetch the full page to read it. Returns { text, title, url } where ' +
+      'text is the page\'s main readable content (up to ~10K chars, with ' +
+      'a "(truncated)" marker if longer). Pages are cached server-side for ' +
+      '24h, so repeated reads of the same URL are free. When you cite ' +
+      'something from a fetched page, cite the page\'s URL — not the ' +
+      'search result\'s URL (they\'re usually the same, but after ' +
+      'redirects they can differ).',
+    parameters: {
+      type      : 'object',
+      properties: {
+        url: {
+          type       : 'string',
+          description: 'Full http(s) URL of the page to read. Must come ' +
+            'from a previous searchWeb result or from a URL the user ' +
+            'explicitly pasted — DO NOT make up URLs.'
+        }
+      },
+      required: ['url']
     }
   }
 ]
@@ -375,6 +430,84 @@ async function impl_searchCatalog(args = {}) {
   }
 }
 
+// ── WEB SEARCH + PAGE FETCH (Cloud-Function-backed) ─────────────────
+//
+// These tools route through HTTPS-callables (ITEM 9c.3) so the Brave
+// Search API key stays server-side, quotas are enforced in Firestore,
+// and SSRF / hostile-host protection lives in one place. The model
+// sees the same shape as for any other tool: pass args, get a data
+// object or { error }.
+
+/**
+ * Pull a hostname out of a URL for the chip label. Best-effort —
+ * falls back to the raw URL truncated to 40 chars if URL parsing
+ * fails. Never throws; UI rendering depends on this.
+ */
+function hostnameForChip(rawUrl) {
+  try {
+    return new URL(rawUrl).hostname
+  } catch (_e) {
+    return String(rawUrl || '').slice(0, 40)
+  }
+}
+
+/**
+ * @param {{query: string, count?: number}} args
+ * @returns {Promise<Object>}
+ */
+async function impl_searchWeb(args) {
+  try {
+    const query = String(args && args.query || '').trim()
+    if (!query) {
+      return { error: 'No search query provided.' }
+    }
+    const callable = httpsCallable(functions, 'lootWebSearch')
+    const res      = await callable({
+      query,
+      count: Number.isInteger(args && args.count) ? args.count : 5
+    })
+    const data     = (res && res.data) || {}
+    if (!Array.isArray(data.results) || data.results.length === 0) {
+      return {
+        error  : `No web results for "${query}". Try a different phrasing or be more specific.`,
+        results: []
+      }
+    }
+    return data
+  } catch (err) {
+    console.error('[lootTools] searchWeb error', err)
+    // Cloud-Function HttpsError comes back with a .message we can show.
+    const msg = err && err.message ? err.message : 'unknown error'
+    return { error: `Web search failed: ${msg}.` }
+  }
+}
+
+/**
+ * @param {{url: string}} args
+ * @returns {Promise<Object>}
+ */
+async function impl_fetchPage(args) {
+  try {
+    const url = String(args && args.url || '').trim()
+    if (!url) {
+      return { error: 'No URL provided.' }
+    }
+    const callable = httpsCallable(functions, 'lootFetchPage')
+    const res      = await callable({ url })
+    const data     = (res && res.data) || {}
+    if (!data.text) {
+      return {
+        error: `Couldn't extract any readable text from ${url}. The page may be JS-heavy or behind a login wall.`
+      }
+    }
+    return data
+  } catch (err) {
+    console.error('[lootTools] fetchPage error', err)
+    const msg = err && err.message ? err.message : 'unknown error'
+    return { error: `Page fetch failed: ${msg}.` }
+  }
+}
+
 // ── EXPORTS ──────────────────────────────────────────────────────────
 
 /** FunctionDeclaration[] — passed into getGenerativeModel({ tools }). */
@@ -388,7 +521,9 @@ export const lootToolImplementations = {
   lookupBookByIsbn  : impl_lookupBookByIsbn,
   searchBooksByTitle: impl_searchBooksByTitle,
   isBookInCatalog   : impl_isBookInCatalog,
-  searchCatalog     : impl_searchCatalog
+  searchCatalog     : impl_searchCatalog,
+  searchWeb         : impl_searchWeb,
+  fetchPage         : impl_fetchPage
 }
 
 /**
@@ -416,5 +551,13 @@ export const LOOT_TOOL_DISPLAY = {
   searchCatalog     : {
     emoji: '📚',
     label: (a) => `Searching catalog: ${describeCatalogCriteria(a || {})}`
+  },
+  searchWeb         : {
+    emoji: '🌐',
+    label: (a) => `Searching the web for "${a && a.query ? a.query : '…'}"`
+  },
+  fetchPage         : {
+    emoji: '📄',
+    label: (a) => `Reading ${a && a.url ? hostnameForChip(a.url) : '…'}`
   }
 }

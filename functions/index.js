@@ -24,7 +24,11 @@ setGlobalOptions({
 const {bootstrapTenantClaim} = require("./src/bootstrapTenantClaim");
 const {claimSetupToken} = require("./src/claimSetupToken");
 const {issueSetupToken} = require("./src/issueSetupToken");
+const {lootWebSearch} = require("./src/lootWebSearch");
+const {lootFetchPage} = require("./src/lootFetchPage");
 
 exports.bootstrapTenantClaim = bootstrapTenantClaim;
 exports.claimSetupToken = claimSetupToken;
 exports.issueSetupToken = issueSetupToken;
+exports.lootWebSearch = lootWebSearch;
+exports.lootFetchPage = lootFetchPage;
