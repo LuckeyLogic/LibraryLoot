@@ -22,12 +22,63 @@ import { normalizeIsbn } from './isbn.js'
  * @property {number|null}   publishedYear
  * @property {string|null}   coverUrl       - Direct URL to cover image.
  * @property {string}        summary
+ * @property {string|null}   series         - Series name (e.g. "Harry Potter"), or null for standalone titles.
+ * @property {number|null}   seriesNumber   - Position within the series (1, 2, 3…), or null when the source doesn't specify.
+ * @property {string[]}      subjects       - Subject / genre / category tags (e.g. ["Friendship", "Middle school"]).
  * @property {'open-library'|'google-books'} source
  */
 
-const OPEN_LIBRARY_DATA = 'https://openlibrary.org/api/books'
+const OPEN_LIBRARY_HOST  = 'https://openlibrary.org'
+const OPEN_LIBRARY_DATA  = 'https://openlibrary.org/api/books'
+const OPEN_LIBRARY_ISBN  = 'https://openlibrary.org/isbn'
 const OPEN_LIBRARY_COVER = 'https://covers.openlibrary.org/b/isbn'
 const GOOGLE_BOOKS       = 'https://www.googleapis.com/books/v1/volumes'
+
+/**
+ * Hard cap on subjects[] length per book. Open Library especially
+ * returns long subject lists; keeping ~6 is plenty for catalog search
+ * + display and avoids bloating doc size.
+ */
+const MAX_SUBJECTS = 6
+
+/**
+ * De-dupe a subject list case-insensitively while preserving the first
+ * occurrence's original casing.
+ */
+function dedupeSubjects(list) {
+  const seen = new Set()
+  const out  = []
+  for (const raw of list) {
+    if (typeof raw !== 'string') continue
+    const s = raw.trim()
+    if (!s) continue
+    const key = s.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(s)
+    if (out.length >= MAX_SUBJECTS) break
+  }
+  return out
+}
+
+/**
+ * Parse Open Library's `series` field, which is sometimes a string like
+ * "The Baby-Sitters Club Graphix #2" — splits the trailing #N into a
+ * separate seriesNumber so admin queries can filter by series alone.
+ *
+ * @param   {Array<string>|string|null|undefined} raw
+ * @returns {{name: string|null, number: number|null}}
+ */
+function parseSeries(raw) {
+  if (!raw) return { name: null, number: null }
+  const first = Array.isArray(raw) ? raw[0] : raw
+  if (typeof first !== 'string' || !first.trim()) return { name: null, number: null }
+  const m = first.match(/^(.*?)(?:\s*[#]\s*(\d+))\s*$/)
+  if (m) {
+    return { name: m[1].trim() || null, number: Number(m[2]) }
+  }
+  return { name: first.trim(), number: null }
+}
 
 /**
  * Extracts the year from a date string like "2020", "2020-01-15",
@@ -69,6 +120,58 @@ async function fromOpenLibrary(isbn13) {
       (data.cover && (data.cover.large || data.cover.medium || data.cover.small)) ||
       `${OPEN_LIBRARY_COVER}/${isbn13}-L.jpg`
 
+    // bibkeys subjects: array of {name, url} objects.
+    const bibkeysSubjects = Array.isArray(data.subjects)
+      ? data.subjects.map((s) => (s && s.name) || (typeof s === 'string' ? s : null)).filter(Boolean)
+      : []
+    // Parse series from bibkeys (rarely present, but a free win when it is).
+    const bibkeysSeries = parseSeries(data.series)
+
+    // Deeper chain: isbn → works → series. The bibkeys endpoint is
+    // shallow — series and subjects barely populate. The works record
+    // for a given edition has much richer data. We follow the chain
+    // with independent try-blocks per leg so any failure leaves us
+    // with whatever bibkeys data we already collected.
+    let workSubjects   = []
+    let chainSeriesName = null
+    let chainSeriesPos  = null
+    try {
+      const edition = await fetch(`${OPEN_LIBRARY_ISBN}/${isbn13}.json`,
+        { headers: { Accept: 'application/json' } })
+        .then((r) => (r.ok ? r.json() : null))
+      const workKey = edition && Array.isArray(edition.works) && edition.works[0] && edition.works[0].key
+      if (workKey) {
+        const work = await fetch(`${OPEN_LIBRARY_HOST}${workKey}.json`,
+          { headers: { Accept: 'application/json' } })
+          .then((r) => (r.ok ? r.json() : null))
+        if (Array.isArray(work && work.subjects)) workSubjects = work.subjects
+
+        // work.series: [{ series: { key: '/series/...' }, position: '7' }]
+        const seriesRef = work && Array.isArray(work.series) && work.series[0]
+        const seriesKey = seriesRef && seriesRef.series && seriesRef.series.key
+        if (seriesKey) {
+          const seriesDoc = await fetch(`${OPEN_LIBRARY_HOST}${seriesKey}.json`,
+            { headers: { Accept: 'application/json' } })
+            .then((r) => (r.ok ? r.json() : null))
+          if (seriesDoc && typeof seriesDoc.name === 'string' && seriesDoc.name.trim()) {
+            chainSeriesName = seriesDoc.name.trim()
+            const pos = parseInt(seriesRef.position, 10)
+            if (Number.isFinite(pos)) chainSeriesPos = pos
+          }
+        }
+      }
+    } catch (_) {
+      // Enrichment failed — proceed with bibkeys-only data.
+    }
+
+    // Prefer work-level subjects (richer) over bibkeys-level when both
+    // exist; same for series (chain > bibkeys).
+    const subjects = dedupeSubjects(
+      workSubjects.length > 0 ? workSubjects : bibkeysSubjects
+    )
+    const series       = chainSeriesName || bibkeysSeries.name   || null
+    const seriesNumber = chainSeriesPos  || bibkeysSeries.number || null
+
     return {
       isbn13,
       title         : data.title || '',
@@ -78,6 +181,9 @@ async function fromOpenLibrary(isbn13) {
       summary       : (data.notes && (data.notes.value || data.notes)) ||
                       (data.excerpts && data.excerpts[0] && data.excerpts[0].text) ||
                       '',
+      series,
+      seriesNumber,
+      subjects,
       source        : 'open-library'
     }
   } catch (_err) {
@@ -112,6 +218,24 @@ async function fromGoogleBooks(isbn13) {
       coverUrl = 'https://' + coverUrl.slice(7)
     }
 
+    // Google Books returns `categories` instead of `subjects` (same
+    // idea: subject/genre tags). Some volumes include them, some don't.
+    const subjects = dedupeSubjects(Array.isArray(v.categories) ? v.categories : [])
+
+    // Google Books surfaces series via `seriesInfo.shortSeriesBookTitle`
+    // (e.g. "Book 3") and `seriesInfo.volumeSeries[0].seriesId`, but no
+    // direct name. Fall back to parsing "Series Name #N" out of the
+    // title or subtitle when present.
+    let series = { name: null, number: null }
+    if (v.seriesInfo && Array.isArray(v.seriesInfo.volumeSeries) && v.seriesInfo.volumeSeries[0]) {
+      // We can't fetch the series name reliably from Google Books'
+      // basic volume response — it requires a separate API. Skip
+      // setting `series.name` here; admin can fill it in manually if
+      // they care.
+      const num = parseInt(v.seriesInfo.bookDisplayNumber, 10)
+      if (Number.isFinite(num)) series.number = num
+    }
+
     return {
       isbn13,
       title         : v.title || '',
@@ -119,6 +243,9 @@ async function fromGoogleBooks(isbn13) {
       publishedYear : pickYear(v.publishedDate),
       coverUrl,
       summary       : v.description || '',
+      series        : series.name,
+      seriesNumber  : series.number,
+      subjects,
       source        : 'google-books'
     }
   } catch (_err) {

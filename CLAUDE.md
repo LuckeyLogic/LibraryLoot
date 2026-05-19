@@ -501,6 +501,89 @@ Broken into shippable sub-items so each is a clean PR.
 - Enforcement happens at challenge acceptance (ITEM 5). Today this commit only updates the doc shape spec, the FAQ entry, the For Parents copy, and the ITEM 5 plan below.
 - AdminBooks form still uses `readingLevel` only; the `minAge` / `maxAge` editor lands in a future tweak — non-blocking since ITEM 5 enforcement is what consumes them.
 
+#### [ ] ITEM 3e — Cover image: URL validity + cycle-through fallback + AI find
+
+Surfaced 2026-05-15 during ITEM 3d testing. The Steam Train, Dream Train book had `coverUrl: https://covers.openlibrary.org/b/isbn/9781452152172-L.jpg` saved, but that URL **doesn't actually load a real image** — Open Library returns a 1×1 placeholder pixel when they don't have the cover. Our code never noticed. Also: when both APIs genuinely have no cover, there's no automated way to find one.
+
+**Three-tier fix when we get to it:**
+
+**Tier 1 — Validate the URL before adopting it** (~15 min)
+- In `bookLookup.js`, append `?default=false` to the Open Library cover-by-ISBN URL so it 404s on real absence rather than serving the placeholder.
+- HEAD-fetch each candidate URL before returning it from the lookup. `fetch(url, {method:'HEAD'}).then(r => r.ok && contentLength > 1000 ? url : null)`. The size check guards against placeholders that 200-OK but are tiny.
+- Admin form: when the saved coverUrl in an existing book is no longer reachable, mark it visually in AdminBooks (red border on the URL field + "broken — needs replacement" hint).
+
+**Tier 2 — "Try next source" button on the Cover URL field in the form** (~45 min)
+- Below the Cover URL input, a button labelled e.g. **"🔁 Try Google Books cover"** (when current source is Open Library) or **"🔁 Try Open Library cover"** (when current source is Google Books).
+- Each press cycles to the next source's cover URL (validated via Tier 1 HEAD check).
+- After exhausting Open Library + Google Books, the button becomes **"🤖 Ask AI to find one"** which triggers Tier 3.
+
+**Tier 3 — AI web search for cover URL** (~varies based on Tier-3 design)
+- New tool / Cloud Function that asks an AI to web-search for the book's cover image, returning a verified URL or null. Must NOT hallucinate — if no real source confirmed, return null and admin uploads manually.
+- Implementation likely batches with the LOOT web-search work in ITEM 9c.3 — same external API key + same security model.
+
+**Tier 4 — Last resort: upload + background removal** (stretch)
+- Manual upload path already exists. Stretch: client-side or Cloud-Function background removal (subject isolation) before storing — uses a model like ModNet or rembg, run on demand at admin's request. Nice-to-have, not blocking.
+
+#### [ ] ITEM 3f — Summary quality: detect placeholder garbage + cycle + AI fallback
+
+Surfaced 2026-05-15 during ITEM 3d testing. Open Library sometimes returns useless distributor-catalog blurbs as the summary — example: `"PK Childrens Plus, Inc. Accelerated Reader LG 2.8 0.5 158536."` That's an Accelerated Reader code (`LG 2.8 0.5 158536` = Lower Grades, reading-level 2.8, 0.5 AR points, AR quiz ID 158536), not a book description. Same shape as ITEM 3e (cycle through sources, AI fallback) but for the summary field.
+
+**Three-tier fix:**
+
+**Tier 1 — Heuristic to detect placeholder summaries** (~15 min)
+- In `bookLookup.js` (or a new helper), classify a summary string as "real" or "placeholder garbage." Heuristics:
+  - Contains `"Accelerated Reader"` → placeholder
+  - Contains `"AR Quiz"` or matches `/[A-Z]{2}\s+\d+\.\d+\s+\d+\.\d+\s+\d{4,}/` (AR code) → placeholder
+  - Under ~60 characters of actual prose → placeholder
+  - Mostly numeric / catalog-code-shaped → placeholder
+- When a fetched summary fails the heuristic, return `summary: ''` so the next-source fallback kicks in.
+
+**Tier 2 — "Try next source" button on Summary field** (~30 min)
+- Same UX as Tier 2 of 3e — button cycles through Open Library → Google Books → AI source.
+- Each press fetches the next source's summary, runs the heuristic, and uses it only if non-placeholder.
+
+**Tier 3 — AI web search for summary** (~varies, batch with 9c.3)
+- New tool / Cloud Function that asks an AI to web-search for a real summary, citing the source. Must NOT hallucinate — return null if no real source found.
+
+**Concrete example of what good looks like** (Claude Chat search for the same ISBN returned this in 30s):
+> "A bedtime picture book from the team behind Goodnight, Goodnight, Construction Site. As night falls, a dream train pulls into the station with an unusual animal crew — monkeys, kangaroos, elephants, polar bears, tortoises — who load each car with cargo suited to their talents: bananas in the boxcar, balls in the hopper, paints in the tankers, ice cream in the reefer. Once aboard, the animals tuck into beds on the flatbed cars and the train rolls into the night. Gentle rhyming text full of onomatopoeia and dreamy pastel illustrations make this a wind-down read for ages 3–6."
+
+That's the bar.
+
+#### [ ] ITEM 3g — Subject tags: filter garbage + curate
+
+Surfaced 2026-05-15. Open Library sometimes returns subjects that are catalog-system metadata, not real subject tags:
+- `nyt:graphic-books-and-manga=2021-10-10` (NYT bestseller list tag)
+- `Juvenile literature` / `Juvenile works` (LoC controlled vocabulary; useful as a filter but not as a reader-facing tag)
+- Single-edition catalog labels with `=` or `:` separators
+
+**Fix path:**
+- In `dedupeSubjects()` (utils/bookLookup.js), add a filter that drops:
+  - Strings containing `:` or `=` (catalog system tags)
+  - Single-word strings under 3 chars (likely garbage)
+- Optionally: store NYT-bestseller-list memberships in a SEPARATE `awards[]` field on book docs so we don't lose the data, just don't surface it as a subject.
+- AdminBooks form already lets the admin curate subjects manually; this just prevents bad data from auto-populating in the first place.
+
+#### [✅] ITEM 3d — Book series + subjects metadata
+
+Extended the Book Firestore doc shape to include three new fields so the catalog supports richer search:
+
+- **`series`** (string | null) — name of the series this book belongs to, e.g. `"The Baby-Sitters Club Graphix"`. Null for standalone titles.
+- **`seriesNumber`** (number | null) — position within the series (1, 2, 3…). Null when the source doesn't specify (single-edition standalones; Google Books often omits).
+- **`subjects`** (string[], max 6) — subject / genre / category tags, e.g. `["Friendship", "Middle school", "Family"]`.
+
+Sources: Open Library returns `series` (string, sometimes with trailing `#N`) and `subjects` (array of `{name, url}` objects). Google Books returns `categories` (for subjects) and a sparse `seriesInfo.bookDisplayNumber` (for the number — never the name reliably; admin fills that in manually if it matters).
+
+Implementation:
+- `src/utils/bookLookup.js` — both `fromOpenLibrary` and `fromGoogleBooks` extract the new fields; `parseSeries()` helper splits `"Series Name #3"` into `{name, number}`; `dedupeSubjects()` collapses case-insensitive duplicates and caps at 6.
+- `src/pages/admin/AdminBooks.jsx` — form gained Series / Series # row + Subjects field (comma-separated, split on save). Hydrates from lookup results AND from existing book docs when editing. Save handler writes the new fields on create + update.
+- `src/lib/loot/lootTools.js` — `searchCatalog` accepts new `series` and `subject` criteria (both substring-matched against the book's stored values, normalized for punctuation). Chip label adapts. Match-result shape now includes `series`, `seriesNumber`, `subjects` so LOOT can mention them when reporting results.
+- `src/lib/loot/lootClient.js` — system prompt gains intent→call examples for series ("any BSC books?" → `{series: "Baby-Sitters Club"}`) and subject ("books about friendship?" → `{subject: "friendship"}`) queries, plus a hedge note that older catalog adds may have empty `subjects` arrays.
+- `scripts/refresh-book-metadata.js` (NEW) — backfill script that re-fetches metadata for every book in the catalog and populates the new fields without overwriting admin-curated values. Re-runnable.
+- `scripts/README.md` — documents the new script.
+
+No rule changes (books were already `public read, admin write`; the new fields ride the existing permissions).
+
 #### [✅] ITEM 3c — Public book browse + per-book detail page
 
 - New `/books` page (`src/pages/Books.jsx` + `.module.css`) — anonymous-readable grid of `active: true` books. Sorted newest-added first. Empty state explains the librarian's still setting up the shelf; loading state shows a brief "loading the shelf…" line. Each tile links to `/books/:isbn`.
@@ -580,6 +663,42 @@ Implemented in 9c.1a (2026-05-15):
 Audience labels: 'admin' for now. 'parent' / 'anon' arrive in 9f / 9g and will use the same logger + doc shape with the audience field flipped. Rules will need to widen at that point.
 
 Miguel surfaced this need on 2026-05-15 during 9b verification, after spotting LOOT confidently hallucinating a "ticket-based prize draw" mechanic that doesn't exist. The weekly digest (9c.1b) will help catch those hallucinations early before they shape an admin's mental model of how the platform works.
+
+#### [ ] ITEM 9c.3 — LOOT web-search tool (close the GUNNY capability gap)
+
+Surfaced 2026-05-15. Miguel asked LOOT for a real book summary and a working cover URL; LOOT couldn't do either because we only gave it `lookupBookByIsbn` / `searchBooksByTitle` / `isBookInCatalog` / `searchCatalog`. None of those reach the broader web. Meanwhile Claude Chat (Anthropic, browser tool) answered the same question in 30 seconds with a high-quality summary, source-cited, no hallucination.
+
+**The diagnosis:** this isn't a Gemini-vs-Claude limitation, it's a Library Loot **setup** limitation. Gemini 2.5 Flash supports tool calling just as well as Anthropic Claude; we just didn't wire a web-search tool. GUNNY (MCL Central's Anthropic-based assistant) has access to `web_search` because Anthropic ships that as a built-in tool. Vertex AI doesn't ship one out of the box, so we have to wire it ourselves.
+
+**Scope:**
+
+**Tier 1 — Pick a web search provider + add a Cloud Function intermediary.**
+- Options:
+  - **Brave Search API** — free tier (2000 queries/month), no card required, returns clean JSON results with snippets + URLs.
+  - **Google Custom Search JSON API** — 100 free queries/day, has card-required configuration, OK quality.
+  - **Bing Web Search API** (now Azure) — paid only, no free tier for new accounts.
+  - **Tavily** — purpose-built for LLM agents, has free tier + cited results.
+- **Recommend: Brave** for the free tier + no-card-required setup. Tavily as backup if Brave's results aren't great.
+- New Cloud Function `lootWebSearch({query, count?})` — onCall, admin-only, uses the configured search API. Returns `[{title, url, snippet, source}]`. Server-side so the API key never leaks to the browser, and so we can centrally rate-limit / log.
+
+**Tier 2 — Add the tool to LOOT.**
+- New `searchWeb(query)` tool in `src/lib/loot/lootTools.js`. Calls the Cloud Function via `httpsCallable`. Returns search results to the model.
+- New chip label: `🌐 Searching the web for "..."`.
+- System prompt update: tell LOOT it can search the web for general questions (summaries, cover candidates, book recommendations, sponsor brand verification, etc.) — but it MUST cite the source URL in its reply, and if it can't find a real source it MUST say so plainly instead of making something up.
+
+**Tier 3 — Add a `fetchPage(url)` follow-up tool** so LOOT can read the full text of a search result if the snippet isn't enough.
+- Cloud Function `lootFetchPage({url})` — uses a server-side fetch + readability extraction (e.g. mozilla/readability), returns clean text up to ~10K chars. Caches for 24h.
+- New tool `fetchPage(url)` in lootTools.js.
+
+**Tier 4 — Wire these for the summary + cover-URL workflows in 3e/3f.**
+- The "🤖 Ask AI to find one" buttons in 3e (cover URL) and 3f (summary) call into the same search + fetch tools. Same backend, different UI surfaces. The AI does the "find a real summary / cover URL" work transparently.
+
+**Cost model:** Brave's free tier (2000 queries/month) is way more than one library uses. We'd never pay. Even at scale, Brave is $5/1000 queries.
+
+**Security model:**
+- All web search goes through Cloud Functions (App Check enforced) — the browser never holds the API key.
+- Admin-only via custom claims. Public LOOT (9g) gets a separately-scoped web tool with stricter rate limits + the token-gate pattern.
+- Logged into the LOOT conversation log so admin can audit what was searched.
 
 #### [ ] ITEM 9c.1b — Weekly insights Cloud Function (`generateLootInsights`)
 
@@ -781,6 +900,12 @@ Per-user, in the existing user doc:
 - **9b (LOOT shell) done.** Floating chat button on `/admin/*`, opens a panel that talks to Gemini 2.5 Flash via Vertex AI. Conversation persists in sessionStorage per session. No tools yet — those land in 9c. First successful chat (verified in dev): `"hi"` → `"Hey! Ready to level up some readers? What's on the quest list today?"` — system prompt landing the Fortnite-vibe tone.
 - **LOOT system-prompt tuning, mid-9b verification.** First version was too restrictive — "Who is the author of _Steam Train, Dream Train_?" got refused with "Not my loot drop — try Google" even though the book is in the catalog and authorship is squarely within scope. Loosened the prompt to explicitly cover books/authors/reading levels/program logistics/sponsor strategy/COPPA basics/platform-itself questions, and tightened the refusal list to truly off-program topics (recipes, sports, news, generic coding, personal advice). Also discovered LOOT was confidently inventing a "ticket-based prize draw" mechanic that doesn't exist — added a `GROUND TRUTH` block to the system prompt that documents the actual per-completion verifiable random draw against the active prize pool (every completion → one prize, randomization on WHICH prize) and explicitly tells LOOT not to invent mechanics it can't ground in the docs or its tools. New tracked sub-item (9c.1) for LOOT conversation logging + weekly digest so we catch future hallucinations early.
 - **Navbar bugs fixed (truncation + mobile menu).** "Hi, Miguel" was clipping to "Hi, Mi..." because of a defensive `max-width: 12ch; overflow: hidden; text-overflow: ellipsis` on `.greeting` that pre-dated the upstream `greeting()` helper's first-name-only collapse. Cap was never needed once we stopped rendering raw emails. Removed entirely; only `white-space: nowrap` remains. Also wired outside-tap + Escape dismiss for the mobile hamburger menu — refs on the toggle button and the nav panel; a `pointerdown` handler at the document level closes the menu when a tap lands outside both. Effect is only attached while the menu is open (no event handler in the common closed state). Verified: tap-outside closes, tap-toggle still toggles, tap-link still navigates + closes, Escape closes.
+- **3 new tracked items surfaced from ITEM 3d testing (2026-05-15):**
+  - **3e (expanded)** — Cover URL validity check + cycle-through-sources button + AI fallback. Steam Train Dream Train was carrying a "valid-looking" OL cover URL that actually serves a 1×1 placeholder pixel; we never noticed.
+  - **3f (new)** — Summary quality. Heuristic to detect placeholder garbage (`Accelerated Reader LG 2.8 0.5 158536` is an AR catalog code, not a description) + cycle through sources + AI fallback to fetch real summaries.
+  - **3g (new)** — Subject tag quality. Filter garbage like `nyt:graphic-books-and-manga=2021-10-10` before it lands in `subjects[]`. Move bestseller-list metadata into a separate `awards[]` field if we want to keep it.
+- **ITEM 9c.3 added (LOOT web-search tool).** Miguel observed that GUNNY (MCL Central, Anthropic Claude) can answer "find me a summary for this book" while LOOT (Library Loot, Gemini 2.5 Flash via Vertex AI) cannot. Diagnosis: it's not a Gemini-vs-Claude capability gap — Gemini's tool-calling is fully featured. The gap is that Anthropic ships a built-in `web_search` tool that GUNNY inherits, while Vertex AI doesn't, so we need to wire it ourselves. Plan: Cloud Function intermediary calling Brave Search API (free tier 2000 queries/month), exposed to LOOT as a `searchWeb(query)` tool + a `fetchPage(url)` follow-up. Server-side so the API key never leaks. Same backend powers the "AI find" buttons in 3e (cover URL) and 3f (summary).
+- **ITEM 3d shipped — book series + subjects metadata.** Surfaced during LOOT verification when a user asked "do we have any baby-sitters club books?" and LOOT couldn't match Kristy and the Snobs (in the catalog) to the BSC series — no `series` field existed on book docs. Added `series` (string|null), `seriesNumber` (number|null), `subjects` (string[], cap 6) to the book Firestore shape. Both APIs (Open Library + Google Books) populate them at lookup time; admin can edit them in AdminBooks; `searchCatalog` accepts new `series` + `subject` criteria with the same punctuation-normalized substring matching used for title/author. Backfill via `scripts/refresh-book-metadata.js` — re-runnable, never clobbers admin-curated values. No rule changes (books were already public-read, admin-write).
 - **ITEM 9c.1a shipped — LOOT conversation logging.** Modeled after MCL Central's `adminChatLogs` pattern: one doc per session keyed by per-tab UUID, full turns array overwritten on each model response (capped at 50 turns), `setDoc(..., {merge: true})` with a one-time getDoc check to keep `sessionStartedAt` from being clobbered on subsequent writes. New `src/lib/loot/lootLogger.js` exports `logLootSession()` + `getOrCreateLootSessionId()` so future audiences (parents 9f, anon 9g) can reuse the same write path. Tool-call chips are included in the persisted turns so the future transcript viewer matches the live chat. Rules: read by any tenant admin; create + update gated on the session's owning UID; delete by any admin. System prompt updated with a LOGGING & TRANSPARENCY section so LOOT answers honestly if asked. 9c.1b (digest function) and 9c.1c (admin viewer) follow as separate items. Skipped LastModified on session docs by design — the natural shape of a chat log (lastTurnAt + always-growing turns array) is its own audit trail.
 - **ITEM 9c.2 shipped — Auth profile mirror + LastModified accountability.** AuthContext gained a new effect that gates on bootstrap success (`claims.tenant` set) and, when a user signs in OR their auth-user object changes mid-session, reads the user's Firestore doc and writes mirrored fields (`displayName`, `photoURL`, `email`) when they've drifted. Two distinct timestamp concepts now live on the doc:
   - **`lastSeenAt`** — activity signal. Bumped on sign-in or every 5+ min of active session regardless of changes. 5-minute freshness floor on writes to avoid token-refresh spam.

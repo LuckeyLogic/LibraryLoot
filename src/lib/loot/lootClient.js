@@ -115,6 +115,15 @@ EXAMPLE INTENT → TOOL CALL TRANSLATIONS:
   "Do we have anything by Ann M Martin?"
     → searchCatalog({ author: "Ann M Martin" })
 
+  "Do we have any Baby-Sitters Club books?"  /  "Any Harry Potter?"
+    → searchCatalog({ series: "Baby-Sitters Club" })
+       (NOT a title search — series matches every book in the run.)
+
+  "Books about friendship?"  /  "Got any fantasy?"
+    → searchCatalog({ subject: "friendship" })  // single-word substring
+       (Subjects can be sparse — older catalog adds might not have any
+       tags. If you get no match, try a title/series search instead.)
+
   "What books do we have for a 7-year-old?"
     → searchCatalog({ forAge: 7, activeOnly: true })
 

@@ -110,6 +110,8 @@ const declarations = [
       properties: {
         title       : { type: 'string',  description: 'Title substring (case-insensitive, punctuation-normalized — commas/colons/etc. don\'t need to match).' },
         author      : { type: 'string',  description: 'Author name substring; matches if ANY author in the book\'s authors[] array contains this.' },
+        series      : { type: 'string',  description: 'Series-name substring; matches book.series. Use for questions like "do we have any Harry Potter books?" or "any Baby-Sitters Club?"' },
+        subject     : { type: 'string',  description: 'Subject / genre / category substring; matches if ANY tag in book.subjects[] contains this. Use for "books about friendship", "fantasy books", etc.' },
         yearMin     : { type: 'integer', description: 'Minimum publishedYear (inclusive).' },
         yearMax     : { type: 'integer', description: 'Maximum publishedYear (inclusive).' },
         readingLevel: { type: 'string',  description: 'Exact match. Valid values: "Early reader", "Grade 3-5", "Middle grade", "YA", "Not specified".' },
@@ -241,6 +243,8 @@ function describeCatalogCriteria(args = {}) {
   const parts = []
   if (args.title)        parts.push(`title "${args.title}"`)
   if (args.author)       parts.push(`author "${args.author}"`)
+  if (args.series)       parts.push(`series "${args.series}"`)
+  if (args.subject)      parts.push(`subject "${args.subject}"`)
   if (args.yearMin != null && args.yearMax != null) parts.push(`year ${args.yearMin}-${args.yearMax}`)
   else if (args.yearMin != null) parts.push(`year ≥ ${args.yearMin}`)
   else if (args.yearMax != null) parts.push(`year ≤ ${args.yearMax}`)
@@ -262,8 +266,10 @@ function describeCatalogCriteria(args = {}) {
 async function impl_searchCatalog(args = {}) {
   try {
     // Pre-compute normalized needles so we don't do it per book.
-    const titleNeedle  = args.title  ? normalizeForSearch(args.title)  : null
-    const authorNeedle = args.author ? normalizeForSearch(args.author) : null
+    const titleNeedle   = args.title   ? normalizeForSearch(args.title)   : null
+    const authorNeedle  = args.author  ? normalizeForSearch(args.author)  : null
+    const seriesNeedle  = args.series  ? normalizeForSearch(args.series)  : null
+    const subjectNeedle = args.subject ? normalizeForSearch(args.subject) : null
 
     const snap = await getDocs(tenantCollection('books'))
     const matches = []
@@ -284,6 +290,21 @@ async function impl_searchCatalog(args = {}) {
           (a) => normalizeForSearch(a).includes(authorNeedle)
         )
         if (!anyAuthorMatch) return
+      }
+
+      // Series substring (single string field on each book, or null).
+      if (seriesNeedle) {
+        const s = normalizeForSearch(data.series)
+        if (!s || !s.includes(seriesNeedle)) return
+      }
+
+      // Subject substring against ANY tag in book.subjects[].
+      if (subjectNeedle) {
+        const subjects = Array.isArray(data.subjects) ? data.subjects : []
+        const anySubjectMatch = subjects.some(
+          (t) => normalizeForSearch(t).includes(subjectNeedle)
+        )
+        if (!anySubjectMatch) return
       }
 
       // Year range (inclusive). null publishedYear excludes the book
@@ -329,6 +350,9 @@ async function impl_searchCatalog(args = {}) {
         readingLevel : data.readingLevel || null,
         minAge       : typeof data.minAge === 'number' ? data.minAge : null,
         maxAge       : typeof data.maxAge === 'number' ? data.maxAge : null,
+        series       : data.series || null,
+        seriesNumber : typeof data.seriesNumber === 'number' ? data.seriesNumber : null,
+        subjects     : Array.isArray(data.subjects) ? data.subjects : [],
         active       : data.active === true,
         quizApproved : data.quizApproved === true
       })

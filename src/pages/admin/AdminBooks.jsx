@@ -80,6 +80,9 @@ function blankForm(isbn13) {
     pendingCoverPreviewUrl: null,        // URL.createObjectURL for in-form preview
     summary               : '',
     readingLevel          : '',
+    series                : '',          // string; null on save when blank
+    seriesNumber          : '',          // string in form, Number on save
+    subjects              : '',          // comma-separated; split on save
     source                : 'manual'
   }
 }
@@ -102,6 +105,9 @@ function formFromLookup(hit) {
     pendingCoverPreviewUrl: null,
     summary               : hit.summary || '',
     readingLevel          : '',
+    series                : hit.series || '',
+    seriesNumber          : hit.seriesNumber != null ? String(hit.seriesNumber) : '',
+    subjects              : (hit.subjects || []).join(', '),
     source                : hit.source
   }
 }
@@ -214,6 +220,42 @@ export default function AdminBooks() {
     performLookup(isbn13)
   }
 
+  // ── Refresh metadata from the web for an existing book ──
+  // Re-runs the Open Library + Google Books lookup for the book's ISBN,
+  // opens the edit form pre-filled with the fresh API data, and lets
+  // the admin review/edit before saving. Preserves Storage-backed
+  // cover paths so we don't lose an admin-uploaded image during a
+  // metadata refresh.
+  const handleRefresh = async (book) => {
+    setLookupError(null)
+    setSaveError(null)
+    setLooking(true)
+    try {
+      const hit = await lookupBookByIsbn(book.isbn13)
+      if (!hit) {
+        setLookupError(
+          `Couldn't refresh "${book.title}" — Open Library and Google Books returned nothing for ISBN ${book.isbn13}. You can still edit manually.`
+        )
+        return
+      }
+      setEditingId(book.id)
+      setForm({
+        ...formFromLookup(hit),
+        // Preserve admin-curated cover Storage state — formFromLookup
+        // resets these to null since they're API-sourced. The admin
+        // can still swap to the API-sourced coverUrl manually below.
+        coverStoragePath      : book.coverStoragePath || null,
+        // Honor admin's existing reading-level choice — the API
+        // never returns this and we shouldn't reset it on refresh.
+        readingLevel          : book.readingLevel || ''
+      })
+    } catch (e) {
+      setLookupError(`Refresh failed: ${e.message || e}`)
+    } finally {
+      setLooking(false)
+    }
+  }
+
   // ── Edit existing ──
   const handleEdit = (book) => {
     setEditingId(book.id)
@@ -228,6 +270,9 @@ export default function AdminBooks() {
       pendingCoverPreviewUrl: null,
       summary               : book.summary || '',
       readingLevel          : book.readingLevel || '',
+      series                : book.series || '',
+      seriesNumber          : book.seriesNumber != null ? String(book.seriesNumber) : '',
+      subjects              : Array.isArray(book.subjects) ? book.subjects.join(', ') : '',
       source                : book.source || 'manual'
     })
     setSaveError(null)
@@ -314,6 +359,14 @@ export default function AdminBooks() {
     const publishedYear = form.publishedYear ? Number(form.publishedYear) : null
     const summary       = (form.summary || '').trim()
     const readingLevel  = form.readingLevel || null
+    const series        = (form.series || '').trim() || null
+    const seriesNumberRaw = (form.seriesNumber || '').trim()
+    const seriesNumber  = seriesNumberRaw ? Number(seriesNumberRaw) : null
+    const subjects      = (form.subjects || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 6)         // mirror MAX_SUBJECTS from bookLookup.js
 
     setSaving(true)
     try {
@@ -378,6 +431,9 @@ export default function AdminBooks() {
           coverStoragePath,
           summary,
           readingLevel,
+          series,
+          seriesNumber,
+          subjects,
           source       : form.source || 'manual',
           updatedAt    : serverTimestamp()
         })
@@ -395,6 +451,9 @@ export default function AdminBooks() {
           coverStoragePath,
           summary,
           readingLevel,
+          series,
+          seriesNumber,
+          subjects,
           source       : form.source || 'manual',
           active       : true,
           quizApproved : false,           // ITEM 5 flips this once a quiz pool exists
@@ -553,6 +612,8 @@ export default function AdminBooks() {
                 onEdit         ={handleEdit}
                 onDelete       ={handleDelete}
                 onToggleActive ={handleToggleActive}
+                onRefresh      ={handleRefresh}
+                refreshing     ={looking}
               />
             ))}
           </div>
@@ -732,6 +793,45 @@ function BookForm({
             </div>
           </div>
 
+          <div className={bookStyles.fieldRow}>
+            <div className={bookStyles.field} style={{ flex: 2 }}>
+              <label className={bookStyles.label}>Series</label>
+              <input
+                type        ="text"
+                value       ={form.series}
+                onChange    ={onFieldChange('series')}
+                className   ={bookStyles.input}
+                disabled    ={saving}
+                placeholder ='e.g. "The Baby-Sitters Club Graphix"'
+              />
+            </div>
+            <div className={bookStyles.field}>
+              <label className={bookStyles.label}>Series #</label>
+              <input
+                type        ="number"
+                value       ={form.seriesNumber}
+                onChange    ={onFieldChange('seriesNumber')}
+                className   ={bookStyles.input}
+                disabled    ={saving}
+                min         ={1}
+                max         ={999}
+                placeholder ="optional"
+              />
+            </div>
+          </div>
+
+          <div className={bookStyles.field}>
+            <label className={bookStyles.label}>Subjects / genre tags</label>
+            <input
+              type        ="text"
+              value       ={form.subjects}
+              onChange    ={onFieldChange('subjects')}
+              className   ={bookStyles.input}
+              disabled    ={saving}
+              placeholder ='Comma-separated, e.g. "Friendship, Middle school, Family"'
+            />
+          </div>
+
           <div className={bookStyles.field}>
             <label className={bookStyles.label}>Cover URL</label>
             <input
@@ -785,7 +885,7 @@ function BookForm({
  *
  * @returns {JSX.Element}
  */
-function BookCard({ book, onEdit, onDelete, onToggleActive }) {
+function BookCard({ book, onEdit, onDelete, onToggleActive, onRefresh, refreshing }) {
   const authors = (book.authors || []).join(', ')
   return (
     <article className={`${bookStyles.bookCard} ${book.active ? '' : bookStyles.bookCardInactive}`}>
@@ -839,6 +939,15 @@ function BookCard({ book, onEdit, onDelete, onToggleActive }) {
           className ={bookStyles.actionBtn}
         >
           Edit
+        </button>
+        <button
+          type      ="button"
+          onClick   ={() => onRefresh(book)}
+          className ={bookStyles.actionBtn}
+          disabled  ={refreshing}
+          title     ="Re-fetch metadata from Open Library / Google Books and review changes before saving."
+        >
+          {refreshing ? 'Refreshing…' : '🔄 Refresh'}
         </button>
         <button
           type      ="button"

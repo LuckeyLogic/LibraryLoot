@@ -72,6 +72,21 @@ After it runs, affected users must sign out and back in for the new claim to app
 
 ---
 
+## `refresh-book-metadata.js` — Backfill series + subjects on existing books
+
+ITEM 3d added `series`, `seriesNumber`, and `subjects` to the book Firestore doc shape so LOOT (and humans browsing the catalog) can answer "do we have any Baby-Sitters Club books?" and "anything about friendship?" Books added before 3d landed don't have those fields populated — this script re-fetches metadata from Open Library / Google Books for every book in the catalog and fills in the new fields without overwriting fields the admin already curated.
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json \
+  node refresh-book-metadata.js [tenantId]
+```
+
+- `[tenantId]` — optional. Defaults to `luckey-logic`.
+
+Safe to re-run. Books that already have `series` / `subjects` populated are skipped (the script never clobbers admin-curated values). Books the APIs don't return are reported as "no API result" — admin can fill in series/subjects manually via AdminBooks.
+
+---
+
 ## `backfill-user-profiles.js` — Sync Auth profile fields into user docs
 
 Read-only against Firebase Auth, write-update against Firestore. Walks every Auth user and ensures their `displayName`, `photoURL`, and `email` are mirrored into `/{tenantId}/_main/users/{uid}`. Idempotent — only touches docs whose mirrored fields actually differ from the current Auth record. Use after the ITEM 9c.2 mirror first lands so historical user docs catch up with Auth without waiting for each user to sign in again. Re-run any time profile-field drift is suspected.
