@@ -1,3 +1,12 @@
+/**
+ * Form for creating or editing a child sub-profile. Captures the bare minimum
+ * permitted by the COPPA stance: - First name (required, max 40 chars) - Birth
+ * year (optional; year only) - Avatar (optional; picked from the tenant's
+ * default pack) Pure controlled form — receives an `initialValue` (or null for
+ * "add"), fires `onSave(payload)` and `onCancel()`. The dashboard owns the
+ * Firestore write.
+ * @module components/ChildForm
+ */
 // src/components/ChildForm.jsx
 //
 // Form for creating or editing a child sub-profile. Captures the bare

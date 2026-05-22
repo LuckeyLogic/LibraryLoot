@@ -1,3 +1,9 @@
+/**
+ * Persistent site footer. Carries the Luckey Logic credit, top-level legal
+ * links, and the Epic Games trademark disclaimer (required on every page per the
+ * Fan Content Policy stance — see SPEC.md §7).
+ * @module components/Footer
+ */
 // src/components/Footer.jsx
 //
 // Persistent site footer. Carries the Luckey Logic credit, top-level legal

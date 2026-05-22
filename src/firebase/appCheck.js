@@ -1,3 +1,14 @@
+/**
+ * Firebase App Check initialization for Library Loot. App Check verifies that
+ * requests coming into Firebase services (Firestore, Storage, Cloud Functions,
+ * AI Logic) originate from THIS app — not from a malicious script scraping our
+ * public Web App config keys and hitting Firebase directly. We use reCAPTCHA
+ * Enterprise as the attestation provider; the SDK obtains a token transparently
+ * on each service call. Production
+ * ───────────────────────────────────────────────────────────────────── The
+ * reCAPTCHA…
+ * @module firebase/appCheck
+ */
 // src/firebase/appCheck.js
 //
 // Firebase App Check initialization for Library Loot.

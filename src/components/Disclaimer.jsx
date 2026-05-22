@@ -1,3 +1,9 @@
+/**
+ * Reusable inline disclaimer block. Use this anywhere on a page that references
+ * Fortnite or V-Bucks prominently, in addition to the always-on footer
+ * disclaimer.
+ * @module components/Disclaimer
+ */
 // src/components/Disclaimer.jsx
 //
 // Reusable inline disclaimer block. Use this anywhere on a page that

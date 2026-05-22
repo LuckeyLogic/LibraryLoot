@@ -356,6 +356,10 @@ function linktoExternal(longName, name) {
 // Directory-prefix groups used by both the @module nav (when files
 // declare @module) AND the source-file fallback nav below. Keep in one
 // place so the labels stay consistent.
+//
+// Order matters — DIR_GROUPS.find() returns the first match, so more
+// specific prefixes (e.g. 'lib/loot/') must come BEFORE their parent
+// ('lib/') or they'll get bucketed by the parent.
 const DIR_GROUPS = [
     { prefix: 'components/', label: 'Components' },
     { prefix: 'pages/',      label: 'Pages'       },
@@ -364,6 +368,9 @@ const DIR_GROUPS = [
     { prefix: 'model/',      label: 'Models'      },
     { prefix: 'utils/',      label: 'Utilities'   },
     { prefix: 'data/',       label: 'Data'        },
+    { prefix: 'firebase/',   label: 'Firebase'    },
+    { prefix: 'lib/loot/',   label: 'LOOT'        },
+    { prefix: 'lib/',        label: 'Libraries'   },
 ];
 
 function buildNav(members, sourceFiles) {

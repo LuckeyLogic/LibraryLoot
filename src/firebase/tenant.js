@@ -1,3 +1,13 @@
+/**
+ * Single source of truth for the active tenant root in Firestore + Storage.
+ * Library Loot is multi-tenant: every Firestore doc lives under the active
+ * tenant's top-level collection. Code anywhere in the app that needs a Firestore
+ * reference must go through THIS module — never hardcode a tenant ID. When the
+ * app eventually resolves the tenant from hostname / claims / route, only this
+ * file changes. Storage paths follow the same convention: every object lives
+ * under a path that begins with the tenant ID.
+ * @module firebase/tenant
+ */
 // src/firebase/tenant.js
 //
 // Single source of truth for the active tenant root in Firestore + Storage.

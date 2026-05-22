@@ -1,3 +1,7 @@
+/**
+ * React entry point for Library Loot.
+ * @module main
+ */
 // src/main.jsx
 //
 // React entry point for Library Loot.

@@ -1,3 +1,13 @@
+/**
+ * Live subscription to the active tenant's settings doc at /{tenantId}/_main.
+ * Returns the operator contact info (`support`), the optional legal supplements
+ * (`legal`), and a merged catch-all `settings` object. Falls back to
+ * siteContent.* defaults when a field is missing — so the public About / Privacy
+ * / Terms pages render cleanly the moment the React app mounts, even before
+ * Firestore has responded. Firestore rules allow public read on `_main` so
+ * anonymous visitors get the live operator contact too…
+ * @module hooks/useTenantSettings
+ */
 // src/hooks/useTenantSettings.js
 //
 // Live subscription to the active tenant's settings doc at /{tenantId}/_main.

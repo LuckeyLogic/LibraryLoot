@@ -1,3 +1,13 @@
+/**
+ * LOOT — Library Loot's admin AI assistant. Thin wrapper around the Firebase AI
+ * Logic SDK so the rest of the app talks to LOOT through a single `chat()`
+ * function and never needs to know which backend (Vertex AI vs. Gemini Developer
+ * API), which model, or how App Check fits in. Backend: Vertex AI (paid, GA, App
+ * Check enforced). The free Gemini Developer API is enabled in our Firebase
+ * project too but is reserved for prototype work; Vertex is what production runs
+ * against. Model: Gemini 2.5 Flash.…
+ * @module lib/loot/lootClient
+ */
 // src/lib/loot/lootClient.js
 //
 // LOOT — Library Loot's admin AI assistant. Thin wrapper around the
@@ -303,8 +313,10 @@ const model = getGenerativeModel(ai, {
  * inline with the conversation. Filtering them out before sending to
  * the SDK keeps the model's view of history clean.
  *
- * @param {Array<{role: string, text?: string, name?: string, args?: Object}>} history
- *        Conversation so far, oldest first.
+ * @param {Array<Object>} history  Conversation so far, oldest first. Each
+ *        turn carries a `role` ('user' | 'model' | 'tool') and either
+ *        a `text` string (user/model turns) or a `{name, args}` pair
+ *        (tool turns).
  * @param {Object} [options]
  * @param {Function} [options.onToolCall]
  *        Optional callback fired when the model emits a function

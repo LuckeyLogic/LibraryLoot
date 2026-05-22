@@ -1,3 +1,13 @@
+/**
+ * Client-side image resize + recompress. Runs in the browser BEFORE the file is
+ * uploaded to Firebase Storage, so the bytes that leave the user's machine are
+ * already small. Reduces Storage cost, upload time (especially on mobile data),
+ * and bandwidth on every subsequent read. Sits on top of the native Canvas API —
+ * no third-party dependency. Works on every browser that supports
+ * createImageBitmap + canvas.toBlob (Chrome / Safari / Firefox current, plus
+ * their iOS / Android peers). Used by: - Admin…
+ * @module utils/imageOptimize
+ */
 // src/utils/imageOptimize.js
 //
 // Client-side image resize + recompress. Runs in the browser BEFORE the

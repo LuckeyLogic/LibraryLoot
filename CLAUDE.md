@@ -922,6 +922,21 @@ Per-user, in the existing user doc:
 
 ## 📝 Session Notes
 
+### 2026-05-20 (night) — Docs site fix (@module tags everywhere)
+
+Operator hit the docs site at `library-loot.web.app/docs/` and saw only source-code views, no actual documentation pages. Diagnosis: every source file had `// ` file-header comments but no `/** @module */` JSDoc block, so `members.modules` was empty during the JSDoc render and only the source-code fallback nav showed up. (MCL Central's docs work because every file there declares `@module`.)
+
+- **New `scripts/add-jsdoc-modules.js`** — idempotent one-shot Node script that walks the JSDoc include paths and prepends a `/** ... @module path/Name */` block to every `.js`/`.jsx` file that doesn't already declare one. Extracts the block's prose description from the file's existing `// ` header (the lines between the path line and "Created by"), word-wraps to ~78 chars so the block reads cleanly in source, and caps very long descriptions at 500 chars with a `…` truncation. Re-runnable — files that already have `@module` are skipped. Commit it for repeatable use on any new file added later.
+- **51 source files gained an @module block**: every file in `src/components`, `src/pages`, `src/context`, `src/data`, `src/firebase` (and `firebase.js`), `src/hooks`, `src/lib`, `src/model` (LastModified.js skipped — already had one), `src/utils`, plus `src/App.jsx` and `src/main.jsx`. Each block uses `path/Name` form: `components/Navbar`, `pages/admin/AdminBooks`, `lib/loot/lootClient`, `utils/bookLookup`, etc.
+- **`jsdoc.config.json`** — added `src/utils`, `src/lib`, `src/model` to the include list. The first two were silently missing entirely from the docs before this commit; the third had files but none reachable via include.
+- **`jsdoc-template/publish.js`** — added three new entries to `DIR_GROUPS` so the new module pages bucket cleanly in the sidebar:
+  - `firebase/` → "Firebase"
+  - `lib/loot/` → "LOOT"  (more specific than the generic lib/, must come before it in array order)
+  - `lib/` → "Libraries"
+- **TypeScript-style JSDoc cleanup in `lootClient.js` + `lootTools.js`**: pre-existing `{role: string, text?: string, ...}` and `{{query: string, count?: number}}` patterns were throwing JSDoc 4 parse errors (CLAUDE.md style guide explicitly forbids that syntax). Rewrote to plain `@param {Object}` + prose-described properties. The docs now build with zero errors.
+- **Output**: 53 `module-*.html` pages generated (51 newly-tagged + 1 LastModified + 1 App). The docs site at `library-loot.web.app/docs/` now shows the JSDoc-rendered prose + parameter tables + return values + member lists with a "View Source" link to the source code view. Matches MCL Central's behavior.
+- **Operator habit going forward**: when adding a new file in any of the included paths, either write the `@module` block by hand or run `node scripts/add-jsdoc-modules.js` to back-fill — the script is idempotent and safe.
+
 ### 2026-05-20 (evening) — Round 2: AI fallback button in diff rows
 
 After the Round 1.5 diff fixes shipped and the operator verified, jumped into Round 2 — the 🤖 Find via AI button that closes the loop on Kristy and the Snobs's empty summary row. The button pays off the 9c.3 web-search capability for the catalog-editing workflow specifically.

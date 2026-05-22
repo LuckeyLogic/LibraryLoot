@@ -1,3 +1,13 @@
+/**
+ * First-admin claim page. Any signed-in user can visit this — they paste their
+ * one-time setup token and the `claimSetupToken` Cloud Function verifies it and
+ * grants admin custom claims for the bound tenant. Wrapped by PrivateRoute, so
+ * unauthenticated visitors get bounced to /login with `from = /admin/setup`.
+ * They land back here after sign-in. If the signed-in user is ALREADY an admin
+ * of some tenant, the page short-circuits to a "you're already in" view instead
+ * of showing the token form.
+ * @module pages/AdminSetup
+ */
 // src/pages/AdminSetup.jsx
 //
 // First-admin claim page. Any signed-in user can visit this — they paste

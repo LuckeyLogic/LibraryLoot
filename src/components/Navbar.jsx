@@ -1,3 +1,8 @@
+/**
+ * Sticky top navigation. Mobile-friendly hamburger collapses links below the nav
+ * bar; brand mark stays visible.
+ * @module components/Navbar
+ */
 // src/components/Navbar.jsx
 //
 // Sticky top navigation. Mobile-friendly hamburger collapses links below the

@@ -1,3 +1,11 @@
+/**
+ * Public catalog browse at /books. Shows only books with active === true.
+ * Anonymous-readable (rules in ITEM 2c made /{tenantId}/_main/books
+ * public-read). Each card links to /books/:isbn for the detail page. Challenge
+ * acceptance from this page lands in ITEM 5; for now the cards just point at the
+ * detail page.
+ * @module pages/Books
+ */
 // src/pages/Books.jsx
 //
 // Public catalog browse at /books. Shows only books with active === true.

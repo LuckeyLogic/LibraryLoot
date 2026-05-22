@@ -1,3 +1,8 @@
+/**
+ * Donor recognition page. Placeholder grid for ITEM 0 — real donor data wires up
+ * in ITEM 4 (prize management + sponsor branding).
+ * @module pages/Donors
+ */
 // src/pages/Donors.jsx
 //
 // Donor recognition page. Placeholder grid for ITEM 0 — real donor data

@@ -1,3 +1,9 @@
+/**
+ * Sign-in page. Google one-tap OR email/password. On success, navigates back to
+ * the page the user was trying to reach (location.state.from) or to the home
+ * page.
+ * @module pages/Login
+ */
 // src/pages/Login.jsx
 //
 // Sign-in page. Google one-tap OR email/password. On success, navigates

@@ -1,3 +1,7 @@
+/**
+ * Top-level router + layout shell for Library Loot.
+ * @module App
+ */
 // src/App.jsx
 //
 // Top-level router + layout shell for Library Loot.

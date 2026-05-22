@@ -1,3 +1,13 @@
+/**
+ * Camera-based barcode scanner that resolves a book's ISBN. Powered by
+ * @zxing/browser, which wraps getUserMedia + the ZXing format readers. Behavior:
+ * - Mounts as a full-screen overlay with a video viewfinder. - Prefers the
+ * rear-facing camera on mobile (`facingMode: environment`). - On scan: validates
+ * the value against utils/isbn (EAN-13 barcodes ARE ISBN-13s when starting with
+ * 978 or 979). Rejects non-book barcodes silently so the user can keep scanning.
+ * - On match: fires `onScan(isbn13)` with the…
+ * @module components/IsbnScanner
+ */
 // src/components/IsbnScanner.jsx
 //
 // Camera-based barcode scanner that resolves a book's ISBN. Powered by

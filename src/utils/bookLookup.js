@@ -1,3 +1,12 @@
+/**
+ * Looks up book metadata by ISBN against two public APIs: 1. Open Library —
+ * primary, generous CORS, no auth, no rate-limit worth worrying about at our
+ * scale. 2. Google Books — fallback when Open Library has nothing. Both APIs are
+ * callable directly from the browser; no Cloud Function proxy needed. Returns a
+ * normalized shape so the admin form doesn't have to know which source it came
+ * from.
+ * @module utils/bookLookup
+ */
 // src/utils/bookLookup.js
 //
 // Looks up book metadata by ISBN against two public APIs:

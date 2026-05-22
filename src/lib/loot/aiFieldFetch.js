@@ -1,3 +1,13 @@
+/**
+ * Per-field "🤖 Find via AI" fetcher for the Refresh-diff modal. Wraps a focused
+ * call into LOOT (Gemini 2.5 Flash via Vertex AI) + the existing 9c.3 searchWeb
+ * / fetchPage Cloud Functions. The operator hits a button on a diff row whose
+ * new value came back empty from Open Library / Google Books, and the AI goes
+ * hunting for a real value on the open web — with the same CITATION & HONESTY
+ * guardrails the LOOT chat already enforces. Tier 3 of ITEMs 3e and 3f — pays
+ * off the capability we built in 9c.3.…
+ * @module lib/loot/aiFieldFetch
+ */
 // src/lib/loot/aiFieldFetch.js
 //
 // Per-field "🤖 Find via AI" fetcher for the Refresh-diff modal.

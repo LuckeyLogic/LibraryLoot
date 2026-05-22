@@ -1,3 +1,13 @@
+/**
+ * Computes a field-by-field diff between an existing book document and a fresh
+ * metadata lookup result. Drives the Refresh-button review modal in AdminBooks
+ * (RefreshDiffModal): the admin sees what the API would change, picks which
+ * changes to accept, and optionally edits the suggested value inline before
+ * applying. Smart defaults protect against the "I manually wrote a good summary,
+ * the API still returns garbage, refresh blew it away" scenario that surfaced in
+ * 2026-05-20 testing: - populate-empty …
+ * @module utils/bookDiff
+ */
 // src/utils/bookDiff.js
 //
 // Computes a field-by-field diff between an existing book document and

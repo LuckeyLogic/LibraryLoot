@@ -1,3 +1,11 @@
+/**
+ * Account creation page. Google sign-in OR email/password signup. Requires the
+ * user to self-attest they are 18+ and to accept the Privacy Policy + Terms of
+ * Service before submit is enabled. Account creation = adult account. Children
+ * participate through this account as sub-profiles created from the parent
+ * dashboard (ITEM 2d).
+ * @module pages/Signup
+ */
 // src/pages/Signup.jsx
 //
 // Account creation page. Google sign-in OR email/password signup. Requires

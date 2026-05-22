@@ -1,3 +1,13 @@
+/**
+ * Public per-book page at /books/:isbn. Anonymous-readable. Shows the cover,
+ * title, authors, year, reading level, summary, and a CTA block that adapts to
+ * the visitor's auth state: - Signed out → "Sign in to accept this challenge" →
+ * /login bounce. - Signed in → "Coming soon" callout; the real
+ * challenge-acceptance flow lands in ITEM 5. Inactive books show a notice
+ * instead of the CTA so a stale bookmark or link doesn't dead-end. The book
+ * detail is still readable so a kid can finish reading something…
+ * @module pages/BookDetail
+ */
 // src/pages/BookDetail.jsx
 //
 // Public per-book page at /books/:isbn. Anonymous-readable. Shows the

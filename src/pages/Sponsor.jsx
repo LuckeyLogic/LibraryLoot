@@ -1,3 +1,13 @@
+/**
+ * "Become a sponsor" landing page. ITEM 0 placeholder — explains the v1
+ * sponsorship flow (physical drop-off, no site-side money handling) and surfaces
+ * the per-tenant program contact. A later item (ITEM 4 — Prize / Sponsor
+ * management) replaces this body with a real intake form that writes a
+ * `/{tenantId}/_main/sponsorInquiries/{id}` doc and notifies the librarian-admin
+ * via their dashboard. The route stays the same so the existing CTAs keep
+ * working.
+ * @module pages/Sponsor
+ */
 // src/pages/Sponsor.jsx
 //
 // "Become a sponsor" landing page.

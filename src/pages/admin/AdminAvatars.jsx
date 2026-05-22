@@ -1,3 +1,13 @@
+/**
+ * CRUD for the tenant's default avatar pack. Lives at /admin/avatars. Pipeline
+ * on upload: 1. User picks one or more image files. 2. Files land in a "staged"
+ * list where the admin names each one (default name derived from filename,
+ * editable inline). 3. Admin clicks "Upload all". Each staged file: a. Optimized
+ * client-side via utils/imageOptimize (resize to 512×512 max, re-encode as PNG
+ * to preserve transparency). b. Optimized Blob uploaded to
+ * /{tenant}/avatars/{avatarId}.png in Firebase Storage. c.…
+ * @module pages/admin/AdminAvatars
+ */
 // src/pages/admin/AdminAvatars.jsx
 //
 // CRUD for the tenant's default avatar pack. Lives at /admin/avatars.

@@ -1,3 +1,10 @@
+/**
+ * A single message bubble in the LOOT chat. User messages right-aligned on a
+ * purple gradient; LOOT messages left-aligned on the night surface.
+ * `pending=true` swaps the text for an animated "thinking" indicator that the
+ * panel renders while waiting on Gemini.
+ * @module components/loot/LootMessage
+ */
 // src/components/loot/LootMessage.jsx
 //
 // A single message bubble in the LOOT chat. User messages right-aligned

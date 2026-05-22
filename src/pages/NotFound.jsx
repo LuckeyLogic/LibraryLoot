@@ -1,3 +1,7 @@
+/**
+ * 404 page.
+ * @module pages/NotFound
+ */
 // src/pages/NotFound.jsx
 //
 // 404 page.

@@ -1,3 +1,13 @@
+/**
+ * Firebase initialization for Library Loot. Web App config keys are NOT secrets
+ * — they're scoped by Firestore / Storage Security Rules + Firebase Authorized
+ * Domains. Service-account JSONs, Function admin credentials, and OAuth client
+ * secrets ARE secrets and live in Firebase Secret Manager / GitHub Actions
+ * secrets, NEVER in source. `measurementId` is included for reference but
+ * Firebase Analytics is NOT initialized here by default — our Privacy Policy
+ * disallows analytics on pages a child interacts…
+ * @module firebase
+ */
 // src/firebase.js
 //
 // Firebase initialization for Library Loot.

@@ -1,3 +1,9 @@
+/**
+ * "About the program" page — explains what Library Loot is, who it's for, how
+ * money flows (it doesn't through the platform), and how draws are made fairly.
+ * Includes the prominent Epic Games disclaimer.
+ * @module pages/About
+ */
 // src/pages/About.jsx
 //
 // "About the program" page — explains what Library Loot is, who it's for,

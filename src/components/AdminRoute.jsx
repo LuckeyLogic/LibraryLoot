@@ -1,3 +1,13 @@
+/**
+ * Route guard for pages that require an authenticated user with the `admin:
+ * true` custom claim on the active tenant. Pages that anyone can reach (e.g.,
+ * `/admin/setup`) should use PrivateRoute instead — this wrapper is for pages
+ * that REQUIRE existing admin status. Behavior: - Loading auth state → render
+ * nothing (avoid flash) - Signed out → redirect to /login with `from` preserved
+ * - Signed in but not admin → redirect to / (home) with no message; the home
+ * page is a safe landing for any non-admin user
+ * @module components/AdminRoute
+ */
 // src/components/AdminRoute.jsx
 //
 // Route guard for pages that require an authenticated user with the

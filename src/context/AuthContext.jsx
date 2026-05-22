@@ -1,3 +1,13 @@
+/**
+ * Auth state + sign-in / sign-up methods for Library Loot. Wraps Firebase Auth.
+ * Exposes the current user, the parsed ID token claims (`admin` and `tenant` —
+ * populated by Cloud Functions in ITEM 2b), and helpers for Google and
+ * Email/Password sign-in. All components that need auth state read it via the
+ * `useAuth()` hook below. Note on claims: in ITEM 2a no Cloud Function has set
+ * claims yet, so `claims` will only contain Firebase's built-in claims (uid,
+ * email, etc.). In ITEM 2b, `claimSetupToken` sets…
+ * @module context/AuthContext
+ */
 // src/context/AuthContext.jsx
 //
 // Auth state + sign-in / sign-up methods for Library Loot.

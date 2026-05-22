@@ -1,3 +1,9 @@
+/**
+ * ISBN normalization + validation. Books in Firestore are keyed by the canonical
+ * ISBN-13 (digits only) so an ISBN-10 input still resolves to the same book
+ * document.
+ * @module utils/isbn
+ */
 // src/utils/isbn.js
 //
 // ISBN normalization + validation. Books in Firestore are keyed by the

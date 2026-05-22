@@ -8,6 +8,9 @@
       "src/firebase.js",
       "src/firebase",
       "src/hooks",
+      "src/lib",
+      "src/model",
+      "src/utils",
       "src/App.jsx",
       "src/main.jsx"
     ],

@@ -1,3 +1,9 @@
+/**
+ * Terms of Service. Pre-launch draft — a real attorney should review before the
+ * program accepts its first real challenge. Marked as DRAFT in the body until
+ * that review happens.
+ * @module pages/Terms
+ */
 // src/pages/Terms.jsx
 //
 // Terms of Service. Pre-launch draft — a real attorney should review before

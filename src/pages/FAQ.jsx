@@ -1,3 +1,12 @@
+/**
+ * Public Q&A — questions are driven by siteContent.faq (data) so editing the
+ * answers doesn't touch component code. Each entry is either a single string
+ * answer or an array of strings (rendered as paragraphs / bullets). Highlighted
+ * scenario: "What happens if Epic asks Library Loot to stop using Fortnite
+ * branding?" — the user-facing summary of the operational playbook documented in
+ * SPEC.md §11.
+ * @module pages/FAQ
+ */
 // src/pages/FAQ.jsx
 //
 // Public Q&A — questions are driven by siteContent.faq (data) so editing

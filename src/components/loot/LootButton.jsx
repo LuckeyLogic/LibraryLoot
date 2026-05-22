@@ -1,3 +1,9 @@
+/**
+ * Floating "open LOOT" button. Bottom-right on every admin page. Click toggles
+ * the LootPanel. State persists in sessionStorage so navigating between admin
+ * routes doesn't close the assistant.
+ * @module components/loot/LootButton
+ */
 // src/components/loot/LootButton.jsx
 //
 // Floating "open LOOT" button. Bottom-right on every admin page.

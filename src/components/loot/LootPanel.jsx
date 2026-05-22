@@ -1,3 +1,10 @@
+/**
+ * LOOT chat panel. Slides up from bottom-right on desktop, fullscreen on mobile.
+ * Conversation history persists in sessionStorage so navigating between admin
+ * routes preserves context; closing the panel keeps the history. Hitting "Clear
+ * chat" wipes it.
+ * @module components/loot/LootPanel
+ */
 // src/components/loot/LootPanel.jsx
 //
 // LOOT chat panel. Slides up from bottom-right on desktop, fullscreen on

@@ -1,3 +1,13 @@
+/**
+ * LOOT's tools — what the assistant can DO when chatting. Each tool has two
+ * halves that live side-by-side in this file so they can't drift: 1. A
+ * FunctionDeclaration (the schema that Gemini sees in the model config). This is
+ * what tells Gemini which tools exist, what arguments they take, and when to use
+ * them. 2. An implementation (the actual JS that runs when Gemini decides to
+ * call the tool). Implementations are async, accept the arguments object the
+ * model produced, and return either a data object…
+ * @module lib/loot/lootTools
+ */
 // src/lib/loot/lootTools.js
 //
 // LOOT's tools — what the assistant can DO when chatting. Each tool has
@@ -452,7 +462,9 @@ function hostnameForChip(rawUrl) {
 }
 
 /**
- * @param {{query: string, count?: number}} args
+ * @param {Object} args
+ * @param {string} args.query  The web-search query string.
+ * @param {number} [args.count] Number of results to fetch (1..10, default 5).
  * @returns {Promise<Object>}
  */
 async function impl_searchWeb(args) {

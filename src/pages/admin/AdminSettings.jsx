@@ -1,3 +1,13 @@
+/**
+ * Admin editor for `/{tenantId}/_main.support` and `_main.legal.*`. Two
+ * sections: 1. Support contact — operator name + program / COPPA / privacy
+ * emails + optional mailing address + a free-text blurb. Surfaces on About,
+ * Privacy, Terms. 2. Legal supplements — optional plain-text supplements that
+ * render below the platform's base Privacy / Terms (see SPEC.md §7.2 for the
+ * base-vs-supplement precedence rules). Writes via setDoc({merge:true}) so we
+ * never accidentally clobber other fields in _main…
+ * @module pages/admin/AdminSettings
+ */
 // src/pages/admin/AdminSettings.jsx
 //
 // Admin editor for `/{tenantId}/_main.support` and `_main.legal.*`.

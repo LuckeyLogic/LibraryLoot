@@ -1,3 +1,10 @@
+/**
+ * Shell for the admin dashboard. Side nav on the left (collapses to a strip
+ * across the top on small screens), <Outlet /> on the right for the active admin
+ * sub-page. Wrap an admin route tree with this layout so the sub-pages don't
+ * each have to render their own nav.
+ * @module components/AdminLayout
+ */
 // src/components/AdminLayout.jsx
 //
 // Shell for the admin dashboard. Side nav on the left (collapses to a

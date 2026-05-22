@@ -1,3 +1,12 @@
+/**
+ * Parent dashboard at /account. PrivateRoute-wrapped. Shows the signed-in
+ * parent's child sub-profiles and lets them create / edit / delete kids.
+ * Subscribes to: /{tenantId}/_main/users/{parentUid}/children — the kid list
+ * /{tenantId}/_main/avatars — to render avatars on cards Rules in place (ITEM
+ * 2c) already allow the parent CRUD on their own children subcollection; no rule
+ * changes needed here.
+ * @module pages/Account
+ */
 // src/pages/Account.jsx
 //
 // Parent dashboard at /account. PrivateRoute-wrapped. Shows the signed-in

@@ -1,3 +1,11 @@
+/**
+ * Single source of truth for site-wide copy, branding values, and legal
+ * disclaimers. Components must NEVER hardcode client-facing strings — they
+ * import what they need from this module. When the app goes multi-tenant at the
+ * content level (later), this file gets replaced with a `useSiteContent()` hook
+ * backed by the tenant's `_main` settings doc. Shape stays the same.
+ * @module data/siteContent
+ */
 // src/data/siteContent.js
 //
 // Single source of truth for site-wide copy, branding values, and legal

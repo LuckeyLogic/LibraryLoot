@@ -1,3 +1,13 @@
+/**
+ * Admin catalog management at /admin/books. Three concerns on one page: 1. Look
+ * up a book by ISBN (Open Library → Google Books fallback). 2. Review and edit
+ * the looked-up metadata, then save the book to /{tenant}/_main/books/{bookId}.
+ * 3. List existing books in a grid with active toggle, edit, delete. ITEM 3b
+ * adds the camera-based barcode scanner that auto-fills the ISBN input here.
+ * ITEM 3c adds the public /books browse + per-book detail page that consume the
+ * same collection.
+ * @module pages/admin/AdminBooks
+ */
 // src/pages/admin/AdminBooks.jsx
 //
 // Admin catalog management at /admin/books.

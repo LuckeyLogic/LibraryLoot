@@ -1,3 +1,10 @@
+/**
+ * Hook that prevents background-page scrolling while a modal / overlay is
+ * mounted. Standard pattern: set body.style.overflow = 'hidden' on mount,
+ * restore the previous value on unmount. Used by the IsbnScanner camera overlay
+ * and (via inline useEffect) by the avatar lightbox in AdminAvatars.
+ * @module hooks/useLockBodyScroll
+ */
 // src/hooks/useLockBodyScroll.js
 //
 // Hook that prevents background-page scrolling while a modal / overlay

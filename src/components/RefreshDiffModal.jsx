@@ -1,3 +1,13 @@
+/**
+ * Per-field "review changes" modal for AdminBooks's Refresh button. Opens after
+ * a fresh metadata lookup of an existing book. Shows every field that differs as
+ * its own row with: - a smart-default checkbox (additive = checked, destructive
+ * / replace = unchecked) so the user never accidentally blows away
+ * manually-curated good prose by hitting "Apply" - the existing value (read-only
+ * display) - the new value as an EDITABLE input/textarea — the user can tweak
+ * the API's suggestion before applying it - a…
+ * @module components/RefreshDiffModal
+ */
 // src/components/RefreshDiffModal.jsx
 //
 // Per-field "review changes" modal for AdminBooks's Refresh button.

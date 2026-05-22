@@ -1,3 +1,13 @@
+/**
+ * Route guard for pages that require a signed-in user. Wraps children; redirects
+ * to /login when the user is not authenticated. Preserves the page the user
+ * originally tried to visit via the `from` location state so /login can bounce
+ * them back after a successful sign-in. ITEM 2a places this in the tree but does
+ * not yet use it on any routes — the first protected route is `/account` in ITEM
+ * 2d. Created early so 2b (which adds `/admin/setup`) and 2d have a ready-made
+ * wrapper.
+ * @module components/PrivateRoute
+ */
 // src/components/PrivateRoute.jsx
 //
 // Route guard for pages that require a signed-in user. Wraps children;

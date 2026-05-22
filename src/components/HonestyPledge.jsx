@@ -1,3 +1,13 @@
+/**
+ * Reader's-promise card shown at challenge acceptance. Kid-readable first-person
+ * pledge statements + a single consent checkbox + an accept button that fires
+ * `onAccept` with a small payload the challenge document can record: {
+ * acceptedAt: Date, statements: string[], version: 'v1' } Storing the snapshot
+ * of pledge text + version means a challenge approved months later still shows
+ * the EXACT promise the kid took at the time, even after we edit the pledge
+ * copy. (Important for trust when a librarian is…
+ * @module components/HonestyPledge
+ */
 // src/components/HonestyPledge.jsx
 //
 // Reader's-promise card shown at challenge acceptance. Kid-readable

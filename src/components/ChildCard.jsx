@@ -1,3 +1,10 @@
+/**
+ * Single-child tile shown in the parent dashboard. Renders the avatar
+ * (transparent PNG on the same gradient surface as the picker), first name,
+ * optional birth year, verified or pending badge, and Edit / Delete actions.
+ * Pure presentational — parent owns the data and the action callbacks.
+ * @module components/ChildCard
+ */
 // src/components/ChildCard.jsx
 //
 // Single-child tile shown in the parent dashboard. Renders the avatar

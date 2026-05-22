@@ -1,3 +1,13 @@
+/**
+ * Renders a grid of the tenant's default avatar pack (from
+ * /{tenantId}/_main/avatars) as a picker. Each tile is a transparent PNG sitting
+ * on the same Fortnite-vibe gradient the admin's avatar manager uses, so what
+ * the parent sees in the picker matches exactly what the admin uploaded.
+ * Controlled component: parent owns the selected `value` and gets notified via
+ * `onChange(avatarId)`. Empty state guides the parent toward the librarian if
+ * the pack hasn't been populated yet.
+ * @module components/AvatarPicker
+ */
 // src/components/AvatarPicker.jsx
 //
 // Renders a grid of the tenant's default avatar pack (from

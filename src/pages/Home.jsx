@@ -1,3 +1,7 @@
+/**
+ * Landing page. Hero, How It Works steps, prize categories, sponsor CTA.
+ * @module pages/Home
+ */
 // src/pages/Home.jsx
 //
 // Landing page. Hero, How It Works steps, prize categories, sponsor CTA.

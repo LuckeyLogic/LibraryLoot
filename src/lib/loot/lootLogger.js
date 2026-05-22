@@ -1,3 +1,13 @@
+/**
+ * LOOT conversation logger. Mirrors MCL Central's adminChatLogs pattern
+ * (functions/index.js — adminChat handler): one Firestore doc per chat session,
+ * whose `turns` array is overwritten on every model response. Multi-tenant by
+ * nature: docs live at /{tenantId}/_main/lootSessions/{sessionId}, with rules
+ * allowing any tenant admin to read all sessions but only the session owner to
+ * write. First write of a session includes `sessionStartedAt`; subsequent writes
+ * only update `lastTurnAt` + `turns`. We avoid…
+ * @module lib/loot/lootLogger
+ */
 // src/lib/loot/lootLogger.js
 //
 // LOOT conversation logger. Mirrors MCL Central's adminChatLogs pattern

@@ -1,3 +1,8 @@
+/**
+ * Privacy Policy. Pre-launch draft — COPPA-aware shape but a real attorney
+ * should review before the program accepts its first real challenge.
+ * @module pages/Privacy
+ */
 // src/pages/Privacy.jsx
 //
 // Privacy Policy. Pre-launch draft — COPPA-aware shape but a real attorney

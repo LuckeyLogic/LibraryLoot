@@ -1,3 +1,9 @@
+/**
+ * Landing page at /admin. Quick links + a live snapshot of the tenant's state —
+ * operator contact, legal supplements, book catalog size, avatar pack size. Each
+ * card links to the panel that owns its data.
+ * @module pages/admin/AdminIndex
+ */
 // src/pages/admin/AdminIndex.jsx
 //
 // Landing page at /admin. Quick links + a live snapshot of the tenant's

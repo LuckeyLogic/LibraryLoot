@@ -1,3 +1,13 @@
+/**
+ * Parent & Guardian guide — walks parents through every step from "what is
+ * this?" to "I picked up my kid's prize at the library." Designed to be
+ * scannable (TL;DR up top, numbered steps, callout boxes) and to address the
+ * standard parent concerns up front (data, safety, time commitment, what their
+ * kid actually does). Content is mostly in this component — the structure is
+ * stable and the guide will evolve in place. The tenant-specific operator
+ * contact + COPPA email come from useTenantSettings so a…
+ * @module pages/ForParents
+ */
 // src/pages/ForParents.jsx
 //
 // Parent & Guardian guide — walks parents through every step from "what
