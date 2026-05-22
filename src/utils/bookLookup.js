@@ -42,8 +42,65 @@ const GOOGLE_BOOKS       = 'https://www.googleapis.com/books/v1/volumes'
 const MAX_SUBJECTS = 6
 
 /**
+ * Library-of-Congress controlled-vocabulary entries that ARE accurate
+ * but read as catalog jargon when surfaced as a reader-facing tag.
+ * Catalogers use these to roll up the whole kids' shelf; they don't
+ * tell a reader anything that the rest of the catalog UI doesn't
+ * already say. Filtered out of subjects[] before display.
+ *
+ * Comparison is case-insensitive against the trimmed string. Add to
+ * this list — don't try to make it cleverer with regex — when more
+ * jargon-shaped entries show up in real catalog adds.
+ */
+const LOC_VOCAB_BLOCKLIST = new Set([
+  'juvenile literature',
+  'juvenile fiction',
+  'juvenile works',
+  'juvenile nonfiction',
+  'juvenile non-fiction',
+  'children\'s literature',
+  'children\'s fiction',
+  'children\'s nonfiction',
+  'children\'s non-fiction'
+])
+
+/**
+ * Returns true when a candidate subject string looks like catalog-
+ * system metadata rather than a real reader-facing tag. Examples it
+ * catches:
+ *   - "nyt:graphic-books-and-manga=2021-10-10"  (NYT-bestseller-list ID)
+ *   - "bisac:JUV019000"                          (BISAC code)
+ *   - "lcsh:fre--"                               (LCSH shorthand)
+ *   - "Juvenile literature"                      (LoC vocab, see set above)
+ *   - any string under 3 chars
+ *   - pure-numeric strings (Dewey Decimal codes, year-range markers)
+ *
+ * Strings like "New York Times bestseller" or "Friendship" or
+ * "Middle school" pass through — they're real human-readable tags.
+ *
+ * @param   {string} s  Already trimmed.
+ * @returns {boolean}
+ */
+function looksLikeGarbageSubject(s) {
+  if (typeof s !== 'string') return true
+  const t = s.trim()
+  if (!t) return true
+  if (t.length < 3) return true
+  // Catalog-system separators. Any `:` or `=` in a subject means it's
+  // almost certainly an internal identifier, not a reader-facing tag.
+  if (/[:=]/.test(t)) return true
+  // Pure numeric: Dewey-decimal codes, year markers, etc.
+  if (/^[\d.\s-]+$/.test(t)) return true
+  // LoC controlled vocabulary — accurate but cataloger-flavored.
+  if (LOC_VOCAB_BLOCKLIST.has(t.toLowerCase())) return true
+  return false
+}
+
+/**
  * De-dupe a subject list case-insensitively while preserving the first
- * occurrence's original casing.
+ * occurrence's original casing. Filters catalog-system garbage (see
+ * looksLikeGarbageSubject) before dedup so the cap doesn't get burned
+ * on tags we'd just drop anyway.
  */
 function dedupeSubjects(list) {
   const seen = new Set()
@@ -52,6 +109,7 @@ function dedupeSubjects(list) {
     if (typeof raw !== 'string') continue
     const s = raw.trim()
     if (!s) continue
+    if (looksLikeGarbageSubject(s)) continue
     const key = s.toLowerCase()
     if (seen.has(key)) continue
     seen.add(key)
@@ -81,6 +139,60 @@ function parseSeries(raw) {
 }
 
 /**
+ * HEAD-fetch a candidate cover URL and decide whether to keep it.
+ *
+ * Why this exists: Open Library has a long-standing habit of serving a
+ * 1×1 placeholder pixel (~100 bytes) when they don't actually have a
+ * cover for a given ISBN — the URL 200-OKs, no error, but the rendered
+ * image is meaningless. We never noticed for "Steam Train, Dream Train"
+ * (issue surfaced 2026-05-15 by the operator). Adding `?default=false`
+ * makes OL 404 on real absence; pairing that with a small-body check
+ * also catches non-OL hosts that ship their own placeholders.
+ *
+ * Behavior:
+ *   - For Open Library covers (covers.openlibrary.org), append
+ *     `?default=false` so the URL 404s on real absence. The returned
+ *     URL keeps the flag, so the front-end <img> shows a broken-image
+ *     icon on later disappearance instead of a silent fake.
+ *   - HEAD with a 5s timeout. On 404 → drop (return null). On a body
+ *     suspiciously small (<1000 bytes) → drop.
+ *   - On network error / HEAD blocked → KEEP the URL. Some CDNs serve
+ *     405 on HEAD even when GET works; better false-positive than
+ *     dropping a legit cover.
+ *
+ * @param   {string|null} url
+ * @returns {Promise<string|null>}
+ */
+async function verifyCoverUrl(url) {
+  if (!url || typeof url !== 'string') return null
+
+  let probeUrl = url
+  if (/covers\.openlibrary\.org/.test(url) && !/\?/.test(url)) {
+    probeUrl = url + '?default=false'
+  }
+
+  try {
+    const ac    = new AbortController()
+    const timer = setTimeout(() => ac.abort(), 5000)
+    const res   = await fetch(probeUrl, { method: 'HEAD', signal: ac.signal })
+    clearTimeout(timer)
+
+    if (!res.ok) return null
+    const lenHeader = res.headers.get('content-length')
+    if (lenHeader) {
+      const len = parseInt(lenHeader, 10)
+      if (Number.isFinite(len) && len > 0 && len < 1000) return null
+    }
+    return probeUrl
+  } catch (_e) {
+    // Network error / CORS / HEAD-blocked CDN. Better to keep the URL
+    // and let the <img> tag sort it out than drop a probably-good
+    // cover. The status-quo behavior before this commit.
+    return url
+  }
+}
+
+/**
  * Extracts the year from a date string like "2020", "2020-01-15",
  * "March 1, 2020", etc. Returns null if no plausible year is present.
  *
@@ -93,6 +205,45 @@ function pickYear(value) {
   const str   = String(value)
   const match = str.match(/(1[5-9]\d{2}|20\d{2}|21\d{2})/)
   return match ? Number(match[1]) : null
+}
+
+/**
+ * Returns true when a candidate "summary" string is almost certainly
+ * NOT a real book description — typically a leak from the source API's
+ * catalog-system data rather than reader-facing prose.
+ *
+ * The motivating example (surfaced 2026-05-15):
+ *   "PK Childrens Plus, Inc. Accelerated Reader LG 2.8 0.5 158536."
+ * That's a distributor blurb with an embedded Accelerated Reader code
+ * (LG = lower-grades, 2.8 reading level, 0.5 AR points, 158536 quiz ID).
+ * It looks like prose at a glance but conveys nothing about the book.
+ *
+ * When the heuristic fires, callers replace the summary with the empty
+ * string so the admin form shows a blank field — clear signal to type
+ * one in or use the upcoming AI fallback (3f Tier 3).
+ *
+ * @param   {string} text
+ * @returns {boolean}
+ */
+function looksLikePlaceholderSummary(text) {
+  if (typeof text !== 'string') return true
+  const t = text.trim()
+  if (!t) return true
+  // Too short to be a real description (a haiku is ~50 chars).
+  if (t.length < 60) return true
+  // Accelerated Reader sigils.
+  if (/Accelerated Reader/i.test(t)) return true
+  if (/\bAR\s*Quiz\b/i.test(t)) return true
+  // AR-code shape: "LG 2.8 0.5 158536" — two letters, decimal, decimal, int.
+  if (/[A-Z]{2}\s+\d+\.\d+\s+\d+\.\d+\s+\d{4,}/.test(t)) return true
+  // Other catalog systems' embedded codes.
+  if (/\bBL\s*:/i.test(t)) return true
+  if (/\bLexile\s*:/i.test(t)) return true
+  // Distributor-blurb shape: short string ending in ", Inc." — common
+  // for entries where the "summary" is actually the publisher's
+  // catalog row.
+  if (t.length < 100 && /,\s*Inc\.?\s*$/.test(t)) return true
+  return false
 }
 
 /**
@@ -172,15 +323,24 @@ async function fromOpenLibrary(isbn13) {
     const series       = chainSeriesName || bibkeysSeries.name   || null
     const seriesNumber = chainSeriesPos  || bibkeysSeries.number || null
 
+    // Cover URL validity check (3e Tier 1) — drop OL's 1×1 placeholder.
+    const verifiedCover = await verifyCoverUrl(cover)
+
+    // Summary placeholder filter (3f Tier 1) — clear AR-code-shaped or
+    // distributor-blurb-shaped strings so the admin sees an empty
+    // field and knows to type one in (or use the future AI button).
+    const rawSummary = (data.notes && (data.notes.value || data.notes)) ||
+                       (data.excerpts && data.excerpts[0] && data.excerpts[0].text) ||
+                       ''
+    const summary    = looksLikePlaceholderSummary(rawSummary) ? '' : rawSummary
+
     return {
       isbn13,
       title         : data.title || '',
       authors,
       publishedYear : pickYear(data.publish_date),
-      coverUrl      : cover,
-      summary       : (data.notes && (data.notes.value || data.notes)) ||
-                      (data.excerpts && data.excerpts[0] && data.excerpts[0].text) ||
-                      '',
+      coverUrl      : verifiedCover,
+      summary,
       series,
       seriesNumber,
       subjects,
@@ -236,13 +396,24 @@ async function fromGoogleBooks(isbn13) {
       if (Number.isFinite(num)) series.number = num
     }
 
+    // Cover URL validity check (3e Tier 1). Google's thumbnails are
+    // usually solid, but the HEAD check catches the edge cases where
+    // a volume's image link points at a dead asset.
+    const verifiedCover = await verifyCoverUrl(coverUrl)
+
+    // Summary placeholder filter (3f Tier 1). Google's `description`
+    // is almost always real prose, but the heuristic is cheap and
+    // catches the rare distributor-blurb edition entries.
+    const rawSummary = v.description || ''
+    const summary    = looksLikePlaceholderSummary(rawSummary) ? '' : rawSummary
+
     return {
       isbn13,
       title         : v.title || '',
       authors,
       publishedYear : pickYear(v.publishedDate),
-      coverUrl,
-      summary       : v.description || '',
+      coverUrl      : verifiedCover,
+      summary,
       series        : series.name,
       seriesNumber  : series.number,
       subjects,

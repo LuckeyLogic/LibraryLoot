@@ -1,7 +1,7 @@
 # Library Loot — Claude Code Project Guide
 > **Library Loot | Community-funded reading rewards for libraries**
 > Developed by **Luckey Logic LLC** | © 2026 Luckey Logic LLC
-> Last updated: 2026-05-19
+> Last updated: 2026-05-20
 
 ---
 
@@ -501,16 +501,17 @@ Broken into shippable sub-items so each is a clean PR.
 - Enforcement happens at challenge acceptance (ITEM 5). Today this commit only updates the doc shape spec, the FAQ entry, the For Parents copy, and the ITEM 5 plan below.
 - AdminBooks form still uses `readingLevel` only; the `minAge` / `maxAge` editor lands in a future tweak — non-blocking since ITEM 5 enforcement is what consumes them.
 
-#### [ ] ITEM 3e — Cover image: URL validity + cycle-through fallback + AI find
+#### [~] ITEM 3e — Cover image: URL validity + cycle-through fallback + AI find
 
 Surfaced 2026-05-15 during ITEM 3d testing. The Steam Train, Dream Train book had `coverUrl: https://covers.openlibrary.org/b/isbn/9781452152172-L.jpg` saved, but that URL **doesn't actually load a real image** — Open Library returns a 1×1 placeholder pixel when they don't have the cover. Our code never noticed. Also: when both APIs genuinely have no cover, there's no automated way to find one.
 
 **Three-tier fix when we get to it:**
 
-**Tier 1 — Validate the URL before adopting it** (~15 min)
-- In `bookLookup.js`, append `?default=false` to the Open Library cover-by-ISBN URL so it 404s on real absence rather than serving the placeholder.
-- HEAD-fetch each candidate URL before returning it from the lookup. `fetch(url, {method:'HEAD'}).then(r => r.ok && contentLength > 1000 ? url : null)`. The size check guards against placeholders that 200-OK but are tiny.
-- Admin form: when the saved coverUrl in an existing book is no longer reachable, mark it visually in AdminBooks (red border on the URL field + "broken — needs replacement" hint).
+**[✅] Tier 1 — Validate the URL before adopting it** (shipped 2026-05-20)
+- `verifyCoverUrl(url)` helper in `bookLookup.js` — HEAD-fetches each candidate URL with a 5s timeout. Drops on 404 or when `content-length` is suspiciously small (<1000 bytes — Open Library's 1×1 placeholder is ~100 bytes). On network error or HEAD-blocked CDN: KEEPS the URL (better false-positive than dropping a legit cover).
+- Appends `?default=false` to `covers.openlibrary.org` URLs so OL 404s on real absence instead of serving the placeholder pixel. The returned URL keeps the flag; future re-renders will show a broken-image icon rather than a silent fake if the cover ever disappears.
+- Applied inside both `fromOpenLibrary` and `fromGoogleBooks` (ISBN-lookup path). The title-search path (`searchOpenLibrary` / `searchGoogleBooks`) intentionally skips the HEAD check — 5 candidates × 5s timeout would balloon LOOT's `searchBooksByTitle` tool latency; the validity check fires once the user actually picks an ISBN.
+- Status-quo behavior preserved for AdminBooks: when the saved coverUrl in an existing book is no longer reachable, the admin sees a broken image. The "red border + needs replacement hint" UI is still pending and slot in cleanly with Tier 2.
 
 **Tier 2 — "Try next source" button on the Cover URL field in the form** (~45 min)
 - Below the Cover URL input, a button labelled e.g. **"🔁 Try Google Books cover"** (when current source is Open Library) or **"🔁 Try Open Library cover"** (when current source is Google Books).
@@ -524,19 +525,20 @@ Surfaced 2026-05-15 during ITEM 3d testing. The Steam Train, Dream Train book ha
 **Tier 4 — Last resort: upload + background removal** (stretch)
 - Manual upload path already exists. Stretch: client-side or Cloud-Function background removal (subject isolation) before storing — uses a model like ModNet or rembg, run on demand at admin's request. Nice-to-have, not blocking.
 
-#### [ ] ITEM 3f — Summary quality: detect placeholder garbage + cycle + AI fallback
+#### [~] ITEM 3f — Summary quality: detect placeholder garbage + cycle + AI fallback
 
 Surfaced 2026-05-15 during ITEM 3d testing. Open Library sometimes returns useless distributor-catalog blurbs as the summary — example: `"PK Childrens Plus, Inc. Accelerated Reader LG 2.8 0.5 158536."` That's an Accelerated Reader code (`LG 2.8 0.5 158536` = Lower Grades, reading-level 2.8, 0.5 AR points, AR quiz ID 158536), not a book description. Same shape as ITEM 3e (cycle through sources, AI fallback) but for the summary field.
 
 **Three-tier fix:**
 
-**Tier 1 — Heuristic to detect placeholder summaries** (~15 min)
-- In `bookLookup.js` (or a new helper), classify a summary string as "real" or "placeholder garbage." Heuristics:
-  - Contains `"Accelerated Reader"` → placeholder
-  - Contains `"AR Quiz"` or matches `/[A-Z]{2}\s+\d+\.\d+\s+\d+\.\d+\s+\d{4,}/` (AR code) → placeholder
-  - Under ~60 characters of actual prose → placeholder
-  - Mostly numeric / catalog-code-shaped → placeholder
-- When a fetched summary fails the heuristic, return `summary: ''` so the next-source fallback kicks in.
+**[✅] Tier 1 — Heuristic to detect placeholder summaries** (shipped 2026-05-20)
+- `looksLikePlaceholderSummary(text)` helper in `bookLookup.js`. Catches:
+  - Empty / under 60 chars of prose
+  - Contains `Accelerated Reader` or `AR Quiz`
+  - Matches the AR-code shape `[A-Z]{2}\s+\d+\.\d+\s+\d+\.\d+\s+\d{4,}` (e.g. `LG 2.8 0.5 158536`)
+  - Other catalog systems' embedded codes (`BL:`, `Lexile:`)
+  - Distributor-blurb shape — short string ending in `, Inc.` or `, Inc`
+- When a fetched summary fails the heuristic, the adapter sets `summary: ''` and returns. The book still surfaces (title / cover / authors / etc. are preserved), but the admin form opens with a blank Summary field — clear signal to type one in. Cross-source fallback inside `lookupBookByIsbn` (OL empty → try Google Books) lands with Tier 2 / Tier 3.
 
 **Tier 2 — "Try next source" button on Summary field** (~30 min)
 - Same UX as Tier 2 of 3e — button cycles through Open Library → Google Books → AI source.
@@ -550,19 +552,20 @@ Surfaced 2026-05-15 during ITEM 3d testing. Open Library sometimes returns usele
 
 That's the bar.
 
-#### [ ] ITEM 3g — Subject tags: filter garbage + curate
+#### [✅] ITEM 3g — Subject tags: filter garbage + curate
 
-Surfaced 2026-05-15. Open Library sometimes returns subjects that are catalog-system metadata, not real subject tags:
-- `nyt:graphic-books-and-manga=2021-10-10` (NYT bestseller list tag)
-- `Juvenile literature` / `Juvenile works` (LoC controlled vocabulary; useful as a filter but not as a reader-facing tag)
-- Single-edition catalog labels with `=` or `:` separators
+Shipped 2026-05-20.
 
-**Fix path:**
-- In `dedupeSubjects()` (utils/bookLookup.js), add a filter that drops:
-  - Strings containing `:` or `=` (catalog system tags)
-  - Single-word strings under 3 chars (likely garbage)
-- Optionally: store NYT-bestseller-list memberships in a SEPARATE `awards[]` field on book docs so we don't lose the data, just don't surface it as a subject.
-- AdminBooks form already lets the admin curate subjects manually; this just prevents bad data from auto-populating in the first place.
+- `looksLikeGarbageSubject(s)` filter added in `bookLookup.js` and applied inside `dedupeSubjects()` before the cap kicks in. Catches:
+  - Strings containing `:` or `=` (`nyt:graphic-books-and-manga=2021-10-10`, `bisac:JUV019000`, `lcsh:fre--`, etc.) — catalog-system identifiers
+  - Strings under 3 chars
+  - Pure-numeric / Dewey-decimal-shaped strings (`813.54`, `2021`, `--`)
+  - Library-of-Congress controlled-vocabulary entries via an explicit `LOC_VOCAB_BLOCKLIST` set: `juvenile literature` / `juvenile fiction` / `juvenile works` / `juvenile nonfiction` / `juvenile non-fiction` / their `children's …` equivalents.
+- Decided AGAINST adding a separate `awards[]` field for v1. Human-readable strings like `"New York Times bestseller"` aren't bad as subjects — they describe the book to a reader. The actual offender was the URL-shaped variant (`nyt:…=2021-10-10`), which the `:`/`=` filter catches. Awards-as-distinct-field is an additive change we can layer on later if the admin UI ever wants to render them differently (gold badge in the corner, etc.); for now, less schema is more.
+- Applied universally via `dedupeSubjects` — both `fromOpenLibrary` and `fromGoogleBooks` benefit.
+- AdminBooks form already lets the admin curate subjects manually after a lookup; this just prevents bad data from auto-populating in the first place.
+
+**Operator follow-up:** re-run `scripts/refresh-book-metadata.js` to rinse the new heuristics through any existing books that were added before this shipped. Same command as before; the script never clobbers admin-curated values, so it's safe to re-run.
 
 #### [✅] ITEM 3d — Book series + subjects metadata
 
@@ -918,6 +921,31 @@ Per-user, in the existing user doc:
 ---
 
 ## 📝 Session Notes
+
+### 2026-05-20 — Data-quality polish (3g done; 3e/3f Tier 1 done)
+
+- **Single-file batched PR.** All three heuristics landed in `src/utils/bookLookup.js` — no schema changes, no new deps, no rules touched. The natural compounding follow-up to 9c.3.
+- **9c.3 verification in production happened first.** Three live tests in LOOT all passed cleanly: real Kirkus summary for *Steam Train Dream Train* with cited URL, honest "couldn't find it" on a made-up series, real sponsor-business lookup for a Pemberville pizza place that pivoted to the actual nearby business. CITATION & HONESTY block is sticking; tool routing is selecting the right tool; chips render correctly. Brave key set + functions deployed; spend cap set to free tier in Brave's dashboard.
+- **Pricing correction.** Brave's "free tier" turned out to be $5/month auto-applied credits (≈ 1000 search requests at $5/1000), NOT 2000 queries/month free as I'd originally documented. AND a card IS required for the credits-only plan. Updated documentation accordingly. Quota cap (50 web searches + 100 page fetches per UID per day) NOT lowered — Miguel wants to watch real usage and tune later.
+- **Heuristic decisions locked:**
+  - **3g** — Skipped the `awards[]` separate field. Human-readable bestseller strings ("New York Times bestseller") pass through fine as subjects. The actual offender was the URL-shaped variant which the `:`/`=` filter catches cleanly. Less schema = less migration risk.
+  - **3e Tier 1** — HEAD-check with 5s timeout; drop on 404 or content-length < 1000 bytes; on network error KEEP the URL (better false-positive than dropping a legit cover). OL URLs get `?default=false` appended so they 404 honestly going forward.
+  - **3f Tier 1** — Clear the summary to empty string when the heuristic fires. Cross-source merging (OL empty → try Google Books) was OUT of scope — sticks with Tier 2 (cycle button) and Tier 3 (AI fallback via 9c.3).
+- **Title-search path skips the HEAD check on purpose.** `searchOpenLibrary` and `searchGoogleBooks` return up to 5 candidates — running 5 HEAD probes × 5s timeout would balloon LOOT's `searchBooksByTitle` tool latency. The validity check fires once the user picks a specific ISBN.
+- **Operator follow-up (for Miguel, when convenient):**
+  - Re-run `scripts/refresh-book-metadata.js` so existing books (Steam Train Dream Train, Kristy and the Snobs, etc.) pick up the cleaned heuristics:
+    ```
+    GOOGLE_APPLICATION_CREDENTIALS="/Users/miguelbrown/LuckeyLogic/Admin/library-loot-firebase-adminsdk-fbsvc-f997eb8924.json" \
+      node /Users/miguelbrown/LuckeyLogic/Programming/WebBasedProjects/library-loot/scripts/refresh-book-metadata.js
+    ```
+    Script never clobbers admin-curated values; safe to re-run.
+  - After refresh: spot-check Steam Train Dream Train — cover URL should change (or the front-end shows broken-image on the bad URL since `?default=false` is appended); summary should clear to empty.
+  - App Check provider config cleanup (still tracked from earlier sessions).
+- **Next session candidates** (ordered by impact-per-hour):
+  - **3e Tier 2 + 3f Tier 2** — "Try next source" cycle buttons in AdminBooks UI. Now that Tier 1 lands, the user-visible failure modes (empty summary, broken cover) need the cycle button to be one-click recoverable.
+  - **3e Tier 3 + 3f Tier 3** — "🤖 Ask AI to find one" buttons that call into the now-shipped `searchWeb` / `fetchPage`. Most satisfying lift once Tier 2 ships — this is where 9c.3 starts paying real dividends.
+  - **9c.1b** — Weekly insights Cloud Function. Building it before there's a real corpus of conversations would produce a sparse digest; better to let LOOT chat usage accumulate first.
+  - **Quota viewer** (`/admin/loot/usage`) — small slice that opens read access on `_loot_meta` to tenant admins and renders a usage table. Defer unless Miguel actually wants the visibility.
 
 ### 2026-05-19 — ITEM 9c.3 (LOOT web-search tool)
 
