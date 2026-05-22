@@ -26,9 +26,11 @@ const {claimSetupToken} = require("./src/claimSetupToken");
 const {issueSetupToken} = require("./src/issueSetupToken");
 const {lootWebSearch} = require("./src/lootWebSearch");
 const {lootFetchPage} = require("./src/lootFetchPage");
+const {lootImageSearch} = require("./src/lootImageSearch");
 
 exports.bootstrapTenantClaim = bootstrapTenantClaim;
 exports.claimSetupToken = claimSetupToken;
 exports.issueSetupToken = issueSetupToken;
 exports.lootWebSearch = lootWebSearch;
 exports.lootFetchPage = lootFetchPage;
+exports.lootImageSearch = lootImageSearch;

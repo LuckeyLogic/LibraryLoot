@@ -922,6 +922,28 @@ Per-user, in the existing user doc:
 
 ## 📝 Session Notes
 
+### 2026-05-20 (very late night) — Round 2.5: Cover URL via image search
+
+The last open piece of the Refresh-diff modal: the coverUrl row's 🤖 button. Round 2 covered summary via `chatWithLoot` + searchWeb/fetchPage, but cover URLs were stuck — `fetchPage`'s cheerio extraction strips `<img>` tags during text extraction, so reaching image URLs through the existing tools was awkward. This commit wires Brave's dedicated image-search endpoint.
+
+- **New `functions/src/lootImageSearch.js`** — onCall, admin-claim required, same Brave subscription token (same secret, just a different endpoint: `/v1/images/search`). Returns up to 8 candidates. Each candidate goes through **server-side HEAD-validation** before being returned: must serve `image/*` content-type, must be ≥5KB (rules out tracking pixels + broken icons + OL-style 1×1 placeholders). Validated candidates only.
+- **Quota**: new `imageSearchCount` field on the same `/_loot_meta/{tenant_uid_date}` doc — separate cap (50/day) so book-cover hunting doesn't eat into the summary-fetch / sponsor-verification budget. Rule already covers this — deny-all on `_loot_meta` from earlier.
+- **New `searchImages` Gemini tool** added to `lootTools.js` (declaration + impl + chip `🖼️ Searching images for "..."`) so LOOT chat can also use image search when an operator asks naturally ("find me a cover for X"). Same backend as the button.
+- **`aiFieldFetch.js` refactored** — `findFieldViaAI({book, field})` now dispatches on field:
+  - `'summary'` → existing structured LOOT prompt path
+  - `'coverUrl'` → NEW direct call to `lootImageSearch`. Bypasses LOOT entirely because image search returns already-validated direct URLs — no reasoning needed, just take the top candidate. Faster, cheaper, deterministic. Returns `{value: top.url, source: top.source}` so the modal can show the source-page chip below the input for verification.
+- **`AI_BUTTON_FIELDS`** in RefreshDiffModal now includes `'coverUrl'`. Same existing button infrastructure (loading state, error, source link, auto-check on success) works for cover URL without any modal-component changes.
+- **LOOT system prompt updated** with the searchImages tool description + a note that book-cover hunts should prefer this over searchWeb. Backtick-escape gotcha during the edit (template literal closure) — fixed.
+
+Trade-offs locked in:
+- **Why direct call vs LOOT roundtrip for cover URL**: Brave's image search already returns image-specific candidates with metadata. Asking LOOT to "find a cover" would just have it call this same tool and pick one — the model adds no real judgment here, just latency + token cost. The operator can review the image inline (the modal shows the URL; operator opens it in a new tab if they want to verify) and re-roll if needed.
+- **Why summary still goes through LOOT**: web summaries need reasoning — pick the right source, extract the relevant paragraph, format it. Image search doesn't need that.
+- **Cover-validation tolerance**: missing content-length on the HEAD response gets LET THROUGH (some CDNs don't send it). Better false-positive than false-negative — operator can re-roll if the result is bad.
+
+Operator follow-up:
+- Deploy: `firebase deploy --only functions` (existing Brave key still in Secret Manager, no new secret needed).
+- Try it: in `/admin/books`, hit 🔄 Refresh on a book whose coverUrl is null or wrong, click the 🤖 button on the Cover URL row. Should land a real cover image URL + source chip.
+
 ### 2026-05-20 (late night) — Round 3: HTTPS dev for LAN phone testing
 
 The ISBN scanner threw `navigator.mediaDevices is undefined` when the operator tried to test on their iPhone at `192.168.68.65:5173`. Browser-level cause: iOS Safari only exposes `mediaDevices` in **secure contexts** — HTTPS pages, or `localhost`. A bare-IP LAN URL is not a secure context, so Safari hides the camera API entirely. Production hosting (Firebase Hosting) is HTTPS so the scanner works there fine — the constraint only bites during LAN dev.

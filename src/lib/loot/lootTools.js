@@ -186,6 +186,35 @@ const declarations = [
       },
       required: ['url']
     }
+  },
+  {
+    name       : 'searchImages',
+    description:
+      'Search the web for IMAGES (Brave Images endpoint). Different ' +
+      'from searchWeb — returns direct image URLs (jpg/png/webp) that ' +
+      'have been server-side-validated to actually serve an image. Each ' +
+      'result has { title, url (direct image), thumbnailUrl, source (page ' +
+      'URL where the image was found), host }. Use ONLY for image-finding ' +
+      'tasks — book covers being the main one. NOT for text content; use ' +
+      'searchWeb for that. When you surface an image URL to the user, ' +
+      'cite the `source` page URL so they can verify the cover is from a ' +
+      'real source (publisher / Goodreads / etc.) and not fan art.',
+    parameters: {
+      type      : 'object',
+      properties: {
+        query: {
+          type       : 'string',
+          description: 'Image search query. For book covers, include the ' +
+            'title and author: e.g. "Steam Train Dream Train Sherri ' +
+            'Duskey Rinker book cover".'
+        },
+        count: {
+          type       : 'integer',
+          description: 'How many candidates to fetch (1-8). Default 5.'
+        }
+      },
+      required: ['query']
+    }
   }
 ]
 
@@ -495,6 +524,40 @@ async function impl_searchWeb(args) {
 }
 
 /**
+ * @param {Object} args
+ * @param {string} args.query  The image-search query string.
+ * @param {number} [args.count] Number of results to fetch (1..8, default 5).
+ * @returns {Promise<Object>}
+ */
+async function impl_searchImages(args) {
+  try {
+    const query = String(args && args.query || '').trim()
+    if (!query) {
+      return { error: 'No image-search query provided.' }
+    }
+    const callable = httpsCallable(functions, 'lootImageSearch')
+    const res      = await callable({
+      query,
+      count: Number.isInteger(args && args.count) ? args.count : 5
+    })
+    const data     = (res && res.data) || {}
+    if (!Array.isArray(data.results) || data.results.length === 0) {
+      return {
+        error  : `No validated image results for "${query}". Brave may not ` +
+                 `have indexed a usable cover, or the candidates failed our ` +
+                 `image-validity check. Try a different query phrasing.`,
+        results: []
+      }
+    }
+    return data
+  } catch (err) {
+    console.error('[lootTools] searchImages error', err)
+    const msg = err && err.message ? err.message : 'unknown error'
+    return { error: `Image search failed: ${msg}.` }
+  }
+}
+
+/**
  * @param {{url: string}} args
  * @returns {Promise<Object>}
  */
@@ -535,7 +598,8 @@ export const lootToolImplementations = {
   isBookInCatalog   : impl_isBookInCatalog,
   searchCatalog     : impl_searchCatalog,
   searchWeb         : impl_searchWeb,
-  fetchPage         : impl_fetchPage
+  fetchPage         : impl_fetchPage,
+  searchImages      : impl_searchImages
 }
 
 /**
@@ -571,5 +635,9 @@ export const LOOT_TOOL_DISPLAY = {
   fetchPage         : {
     emoji: '📄',
     label: (a) => `Reading ${a && a.url ? hostnameForChip(a.url) : '…'}`
+  },
+  searchImages      : {
+    emoji: '🖼️',
+    label: (a) => `Searching images for "${a && a.query ? a.query : '…'}"`
   }
 }

@@ -129,6 +129,17 @@ worked.
     from searchWeb or from the user. Pages are cached server-side for
     24h. Same citation rule: when you draw on the fetched content,
     cite the page's URL.
+  - searchImages(query, count?): Brave Images endpoint. Returns
+    direct image URLs (jpg/png/webp) that have been server-side-
+    validated to actually serve an image (HEAD-checked content-type +
+    minimum byte size). Each result has { title, url (direct image),
+    thumbnailUrl, source (page where the image was found), host }.
+    Use this for book-cover hunts — much more reliable than trying
+    to extract image URLs from searchWeb results, since the
+    fetchPage tool strips <img> tags during text extraction. When you
+    surface an image URL, cite the \`source\` page so the user can
+    verify the cover is from a real source (publisher / Goodreads),
+    not random fan art.
 
 EXAMPLE INTENT → TOOL CALL TRANSLATIONS:
 

@@ -21,15 +21,24 @@
 // Tier 3 of ITEMs 3e and 3f — pays off the capability we built in
 // 9c.3.
 //
-// SCOPE for v1:
+// SCOPE:
 //   - 'summary'  : structured AI extraction of a kid-appropriate
-//                  plot summary from web search + page fetch
-//   - 'coverUrl' : NOT YET. Requires reaching image URLs through
-//                  fetchPage's text-only extraction, OR a new
-//                  imageSearch Cloud Function. Tracked as Round 2.5.
+//                  plot summary from web search + page fetch. Uses
+//                  chatWithLoot under the hood so LOOT can reason
+//                  about which page is the best source and stay
+//                  honest under the CITATION & HONESTY system prompt.
+//   - 'coverUrl' : direct call to the lootImageSearch Cloud Function
+//                  (Round 2.5). Image search returns server-side-
+//                  validated image URLs already — no reasoning needed,
+//                  so we skip the LOOT roundtrip and just take the
+//                  top result. Faster, cheaper, deterministic.
 //
 // Created by Miguel Brown on 5/20/26.
 // Copyright (c) 2026 Luckey Logic LLC. All rights reserved.
+
+import { httpsCallable }     from 'firebase/functions'
+
+import { functions }         from '../../firebase.js'
 
 import { chatWithLoot }      from './lootClient.js'
 
@@ -123,37 +132,64 @@ function parseStructuredResponse(text) {
 }
 
 /**
- * Ask LOOT to find a real value for one field of a book, by searching
- * the open web through the existing searchWeb + fetchPage tools.
+ * Cover-URL handler: direct call to the lootImageSearch Cloud Function
+ * (Round 2.5). Bypasses chatWithLoot — image-search results from Brave
+ * are already server-side-validated (HEAD-checked for content-type
+ * image/* + minimum byte size), so we just take the top candidate and
+ * return its direct URL + the page-source URL for citation. No model
+ * reasoning needed; one Cloud Function call, one result.
  *
- * Returns either { value, source } where `value` is the field text
- * the modal should drop into the editable input AND `source` is the
- * URL we got it from (for the operator's reference), or { error }
- * with a one-sentence message safe to show in the UI.
- *
- * Never throws — every error path returns the { error } shape.
- *
- * @param {Object} params
- * @param {Object} params.book   The book doc currently in Firestore (or
- *                               the lookup result). Used for title,
- *                               authors, isbn13, publishedYear.
- * @param {string} params.field  Field key — one of: 'summary'.
+ * @param {Object} book
  * @returns {Promise<{value: string, source: string|null} | {error: string}>}
  */
-export async function findFieldViaAI({ book, field }) {
-
-  const promptFn = FIELD_PROMPTS[field]
-  if (!promptFn) {
-    return { error: `AI search for "${field}" isn't supported yet.` }
-  }
-  if (!book) {
-    return { error: 'No book context provided.' }
+async function findCoverUrlViaImageSearch(book) {
+  const authors = (book.authors || []).join(' ') || ''
+  const yearBit = book.publishedYear ? ` ${book.publishedYear}` : ''
+  const query   = `${book.title || ''} ${authors}${yearBit} book cover`.trim()
+  if (!query) {
+    return { error: 'No book title — nothing to search for.' }
   }
 
   try {
-    const prompt  = promptFn(book)
-    const history = [{ role: 'user', text: prompt }]
-    const reply   = await chatWithLoot(history)
+    const callable = httpsCallable(functions, 'lootImageSearch')
+    const res      = await callable({ query, count: 5 })
+    const data     = (res && res.data) || {}
+    if (!Array.isArray(data.results) || data.results.length === 0) {
+      return {
+        error: 'Image search came back empty after server-side validation. ' +
+               'Try editing the search by hand, or upload a cover image directly.'
+      }
+    }
+    const top = data.results[0]
+    if (!top || !top.url) {
+      return { error: 'Top image result was missing a URL — try again.' }
+    }
+    return { value: top.url, source: top.source || top.url }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[aiFieldFetch] image search failed', err)
+    return {
+      error: err && err.message
+        ? `Image search failed: ${err.message}`
+        : 'Image search failed.'
+    }
+  }
+}
+
+/**
+ * Summary handler: structured AI prompt + chatWithLoot. The LOOT
+ * system prompt's CITATION & HONESTY block keeps the model honest;
+ * we just unpack the structured response. See FIELD_PROMPTS above.
+ *
+ * @param {Object} book
+ * @returns {Promise<{value: string, source: string|null} | {error: string}>}
+ */
+async function findSummaryViaLoot(book) {
+  try {
+    const promptFn = FIELD_PROMPTS.summary
+    const prompt   = promptFn(book)
+    const history  = [{ role: 'user', text: prompt }]
+    const reply    = await chatWithLoot(history)
     return parseStructuredResponse(reply)
   } catch (err) {
     // chatWithLoot throws for bad history shape; the underlying
@@ -168,4 +204,33 @@ export async function findFieldViaAI({ book, field }) {
         : 'AI request failed.'
     }
   }
+}
+
+/**
+ * Find a real value for one field of a book by searching the open
+ * web. Dispatches to the appropriate handler based on field — summary
+ * uses a structured LOOT prompt + searchWeb/fetchPage, coverUrl goes
+ * straight to lootImageSearch.
+ *
+ * Returns either { value, source } where `value` is the field text
+ * the modal should drop into the editable input AND `source` is the
+ * URL we got it from (for the operator's reference), or { error }
+ * with a one-sentence message safe to show in the UI.
+ *
+ * Never throws — every error path returns the { error } shape.
+ *
+ * @param {Object} params
+ * @param {Object} params.book   The book doc currently in Firestore (or
+ *                               the lookup result). Used for title,
+ *                               authors, isbn13, publishedYear.
+ * @param {string} params.field  Field key — one of: 'summary', 'coverUrl'.
+ * @returns {Promise<{value: string, source: string|null} | {error: string}>}
+ */
+export async function findFieldViaAI({ book, field }) {
+  if (!book) {
+    return { error: 'No book context provided.' }
+  }
+  if (field === 'summary')  return findSummaryViaLoot(book)
+  if (field === 'coverUrl') return findCoverUrlViaImageSearch(book)
+  return { error: `AI search for "${field}" isn't supported yet.` }
 }

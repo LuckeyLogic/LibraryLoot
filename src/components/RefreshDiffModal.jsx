@@ -38,13 +38,13 @@ import { findFieldViaAI }                      from '../lib/loot/aiFieldFetch.js
 import styles                                  from './RefreshDiffModal.module.css'
 
 /**
- * Fields for which the "🤖 Find via AI" button is wired in v1. Adding
- * a field here implies aiFieldFetch.js has a prompt template for it.
- * Cover URL is intentionally NOT here yet — the existing fetchPage
- * tool strips images during text extraction, so cover lookup needs a
- * separate image-search Cloud Function (tracked as Round 2.5).
+ * Fields for which the "🤖 Find via AI" button is wired. Adding a
+ * field here implies aiFieldFetch.js has a handler for it.
+ *   - summary  : structured LOOT prompt + searchWeb/fetchPage (Round 2)
+ *   - coverUrl : direct lootImageSearch (Round 2.5) — server-side-
+ *                validated image URLs, no LOOT roundtrip needed
  */
-const AI_BUTTON_FIELDS = new Set(['summary'])
+const AI_BUTTON_FIELDS = new Set(['summary', 'coverUrl'])
 
 /**
  * RefreshDiffModal — review and selectively apply API-suggested
