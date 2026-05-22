@@ -35,6 +35,13 @@ const FIELDS = [
 ]
 
 /**
+ * Hard cap on subjects[] length. Mirrors `MAX_SUBJECTS` in
+ * src/utils/bookLookup.js — kept in sync by hand. Drives the
+ * additive-merge math for the subjects diff row.
+ */
+const SUBJECTS_CAP = 6
+
+/**
  * Convert a field value (from either an existing book doc or a fresh
  * lookup result) into the string shape the form uses. The form layer
  * is all-strings — arrays render as comma-joined, numbers as their
@@ -69,6 +76,71 @@ function classifyKind(oldS, newS) {
 }
 
 /**
+ * Special-case row builder for `subjects`. Subjects are tags (set-like),
+ * not a single value, so a whole-array replace is the wrong semantic —
+ * API returning a SHORTER list than what the admin curated shouldn't
+ * propose deleting the admin's work.
+ *
+ * Rules:
+ *   1. Compute the case-insensitive set difference (tags the API has
+ *      that the existing book doesn't).
+ *   2. If `existing` is already at SUBJECTS_CAP, there's no room to
+ *      add anything — return null (no row).
+ *   3. If no genuinely-new tags survive the diff — return null.
+ *   4. Otherwise, the proposed value is `existing` + the new tags,
+ *      capped at SUBJECTS_CAP (existing-first, additions overflow gets
+ *      dropped).
+ *
+ * The diff is *additive only* — existing tags are never removed by
+ * default. If the admin wants to remove tags, they can edit the input
+ * field inline before applying.
+ *
+ * @param   {Object} existing
+ * @param   {Object} fresh
+ * @returns {Object|null}  Row object, or null when there's nothing to
+ *                         add.
+ */
+function diffSubjectsRow(existing, fresh) {
+  const oldArr = Array.isArray(existing.subjects) ? existing.subjects : []
+  const newArr = Array.isArray(fresh.subjects)    ? fresh.subjects    : []
+
+  if (oldArr.length >= SUBJECTS_CAP) return null
+
+  const existingSet = new Set(oldArr.map((s) => String(s).toLowerCase().trim()))
+  const additions   = []
+  const roomLeft    = SUBJECTS_CAP - oldArr.length
+  for (const t of newArr) {
+    const trimmed = String(t).trim()
+    const key     = trimmed.toLowerCase()
+    if (!trimmed || existingSet.has(key)) continue
+    additions.push(trimmed)
+    existingSet.add(key)
+    if (additions.length >= roomLeft) break
+  }
+  if (additions.length === 0) return null
+
+  const proposed = [...oldArr, ...additions]
+  const oldS     = oldArr.join(', ')
+  const newS     = proposed.join(', ')
+
+  const kindLabel = additions.length === 1
+    ? `Will add new tag: "${additions[0]}"`
+    : `Will add ${additions.length} new tags`
+
+  return {
+    field         : 'subjects',
+    label         : 'Subjects',
+    inputType     : 'csv',
+    hint          : `Comma-separated list, max ${SUBJECTS_CAP} tags`,
+    oldValue      : oldS,
+    newValue      : newS,
+    kind          : 'additive',
+    kindLabel,                       // overrides the default diffKindLabel
+    defaultChecked: true
+  }
+}
+
+/**
  * Build the list of diff rows for the Refresh modal.
  *
  * Skips fields where the existing and fresh values are identical after
@@ -76,12 +148,18 @@ function classifyKind(oldS, newS) {
  * are never API-sourced (readingLevel, coverStoragePath) or that the
  * admin can't safely change here (isbn13, source).
  *
+ * `subjects` gets special-case additive-merge semantics (see
+ * `diffSubjectsRow`) — the API can suggest ADDING tags but never
+ * REMOVING admin-curated ones.
+ *
  * @param   {Object} existing  The book doc currently in Firestore.
  * @param   {Object} fresh     The lookup result from utils/bookLookup.lookupBookByIsbn.
  * @returns {Array<Object>}
- *     Each entry: { field, label, inputType, hint, oldValue, newValue, kind, defaultChecked }.
+ *     Each entry: { field, label, inputType, hint, oldValue, newValue, kind,
+ *                   kindLabel?, defaultChecked }.
  *     - oldValue/newValue are the string forms (for display + as the initial editable input value).
- *     - kind drives the row's color/label.
+ *     - kind drives the row's color/visual treatment.
+ *     - kindLabel (optional) overrides the default text from diffKindLabel().
  *     - defaultChecked is the smart-default state for the checkbox.
  */
 export function computeBookDiff(existing, fresh) {
@@ -89,6 +167,14 @@ export function computeBookDiff(existing, fresh) {
 
   const rows = []
   for (const f of FIELDS) {
+
+    // Subjects: additive set-merge instead of whole-array replace.
+    if (f.key === 'subjects') {
+      const row = diffSubjectsRow(existing, fresh)
+      if (row) rows.push(row)
+      continue
+    }
+
     const oldS = stringify(existing, f.key).trim()
     const newS = stringify(fresh, f.key).trim()
     if (oldS === newS) continue

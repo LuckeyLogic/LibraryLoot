@@ -922,6 +922,20 @@ Per-user, in the existing user doc:
 
 ## 📝 Session Notes
 
+### 2026-05-20 (late afternoon) — Diff-quality follow-up
+
+Operator hit Refresh on Kristy and the Snobs and the diff modal lit up with 5 rows, ALL defaulting to unchecked — nothing was actionable. Investigation found three real bugs that the modal was correctly surfacing as noise:
+
+1. **Title + subtitle weren't being combined.** OL returns `title="Kristy and the Snobs"` + `subtitle="a Graphic Novel"` as two separate fields. My code in `fromOpenLibrary` (and `fromGoogleBooks`) only read `title`. So every book with a subtitle would show up as a "Will replace your existing value" diff against an admin who'd combined them. New `combineTitle(title, subtitle)` helper joins them with `: ` separator and capitalizes the subtitle's first letter (OL's catalog style is "a Graphic Novel" — readers write "A Graphic Novel"). Applied in `fromOpenLibrary`, `fromGoogleBooks`, `searchOpenLibrary`, `searchGoogleBooks`. Title diffs disappear for the dozens of books where admin already curated the combined form.
+2. **Subjects diff was a whole-array replace.** Existing 6 tags vs API's 1 tag → modal proposed "Will replace your existing value" with 1 tag, blowing away 6 admin-curated ones. New `diffSubjectsRow` does additive set-merge: compute `additions = apiSubjects - existingSubjects` (case-insensitive), cap by `SUBJECTS_CAP - existingCount` room remaining, surface only when room exists AND there are genuine new tags. The diff is **additive-only** — existing tags never disappear by default. If the operator wants to remove a tag, they edit the input inline. kindLabel override: "Will add new tag: 'X'" (single) or "Will add N new tags" (multiple). Defaults to checked. For Kristy with 6 curated tags already (full), no subjects row appears at all.
+3. **OL `work.description` wasn't being read.** Some OL works have descriptions on the works record even when bibkeys has no notes/excerpts. New fallback in the deeper chain: try `work.description` (handles both string and `{type, value}` shapes) when bibkeys summary is empty or fails the placeholder heuristic. Won't help every book (Kristy's works record genuinely has no description), but every other book that previously came back blank will gain a real summary candidate.
+
+Built `kindLabel` field into the diff row shape so individual rows can override the default kind chip text — used by the additive subjects row to say "Will add 1 new tag" instead of the generic "Will populate empty field". Modal honors `row.kindLabel || diffKindLabel(row.kind)`.
+
+Decided AGAIN to defer `awards[]` as a separate field. The additive subjects merge handles the immediate case ("New York Times bestseller" lands in subjects when room exists) without a schema change. Operator's mental model expected awards[] — we'll revisit if real catalog usage shows bestseller info actually deserves its own visual treatment.
+
+Build clean (no dep / rule / config changes). Round 2 (AI fallback button per row for the truly-blank API fields) is the next slice — that's where 9c.3 starts paying real dividends.
+
 ### 2026-05-20 (afternoon) — Refresh diff modal + script rinse pass
 
 - **Surfaced from operator testing**: after the morning's Tier 1 heuristic commit landed and the operator re-ran `refresh-book-metadata.js`, Steam Train Dream Train's bad cover URL was still in place. Diagnosis: the script was scoped to ITEM 3d (series/subjects backfill ONLY) and never touched cover/summary fields. The UI Refresh button DID apply the heuristics, but it overwrote the whole form with API values — including manually-curated good prose that the operator had already typed in. Both gaps fixed in this slice.

@@ -215,7 +215,7 @@ function DiffRow({ row, onToggle, onEdit }) {
             {row.label}
           </label>
           <span className={`${styles.kindChip} ${kindClass}`}>
-            {diffKindLabel(row.kind)}
+            {row.kindLabel || diffKindLabel(row.kind)}
           </span>
           {row.hint ? <span className={styles.hint}>{row.hint}</span> : null}
         </div>

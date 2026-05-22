@@ -120,6 +120,33 @@ function dedupeSubjects(list) {
 }
 
 /**
+ * Combine a title and subtitle into the form catalogers and humans
+ * actually use: "Title: Subtitle". Capitalizes the subtitle's first
+ * letter (Open Library frequently returns "a Graphic Novel" — that's
+ * cataloger style, not how a reader writes it) so the result matches
+ * the convention admins use in AdminBooks.
+ *
+ * Returns `title` alone when there's no subtitle. Returns `''` when
+ * `title` is missing.
+ *
+ * Example:
+ *   combineTitle('Kristy and the Snobs', 'a Graphic Novel')
+ *     → 'Kristy and the Snobs: A Graphic Novel'
+ *
+ * @param   {string|null|undefined} title
+ * @param   {string|null|undefined} subtitle
+ * @returns {string}
+ */
+function combineTitle(title, subtitle) {
+  const t = (title || '').toString().trim()
+  if (!t) return ''
+  const s = (subtitle || '').toString().trim()
+  if (!s) return t
+  const capped = s.charAt(0).toUpperCase() + s.slice(1)
+  return `${t}: ${capped}`
+}
+
+/**
  * Parse Open Library's `series` field, which is sometimes a string like
  * "The Baby-Sitters Club Graphix #2" — splits the trailing #N into a
  * separate seriesNumber so admin queries can filter by series alone.
@@ -279,13 +306,15 @@ async function fromOpenLibrary(isbn13) {
     const bibkeysSeries = parseSeries(data.series)
 
     // Deeper chain: isbn → works → series. The bibkeys endpoint is
-    // shallow — series and subjects barely populate. The works record
-    // for a given edition has much richer data. We follow the chain
-    // with independent try-blocks per leg so any failure leaves us
-    // with whatever bibkeys data we already collected.
-    let workSubjects   = []
+    // shallow — series, subjects, and the work-level description barely
+    // populate from it. The works record for a given edition has much
+    // richer data. We follow the chain with independent try-blocks per
+    // leg so any failure leaves us with whatever bibkeys data we
+    // already collected.
+    let workSubjects    = []
     let chainSeriesName = null
     let chainSeriesPos  = null
+    let workDescription = ''
     try {
       const edition = await fetch(`${OPEN_LIBRARY_ISBN}/${isbn13}.json`,
         { headers: { Accept: 'application/json' } })
@@ -296,6 +325,19 @@ async function fromOpenLibrary(isbn13) {
           { headers: { Accept: 'application/json' } })
           .then((r) => (r.ok ? r.json() : null))
         if (Array.isArray(work && work.subjects)) workSubjects = work.subjects
+
+        // OL stores work descriptions as either a plain string OR a
+        // typed object { type: '/type/text', value: '...' }. Handle
+        // both shapes. This is the most reliable way to get real
+        // prose for books whose bibkeys.notes is empty — many works
+        // have rich descriptions here even when the edition does not.
+        if (work && work.description) {
+          if (typeof work.description === 'string') {
+            workDescription = work.description
+          } else if (typeof work.description.value === 'string') {
+            workDescription = work.description.value
+          }
+        }
 
         // work.series: [{ series: { key: '/series/...' }, position: '7' }]
         const seriesRef = work && Array.isArray(work.series) && work.series[0]
@@ -326,17 +368,29 @@ async function fromOpenLibrary(isbn13) {
     // Cover URL validity check (3e Tier 1) — drop OL's 1×1 placeholder.
     const verifiedCover = await verifyCoverUrl(cover)
 
-    // Summary placeholder filter (3f Tier 1) — clear AR-code-shaped or
-    // distributor-blurb-shaped strings so the admin sees an empty
-    // field and knows to type one in (or use the future AI button).
-    const rawSummary = (data.notes && (data.notes.value || data.notes)) ||
-                       (data.excerpts && data.excerpts[0] && data.excerpts[0].text) ||
-                       ''
-    const summary    = looksLikePlaceholderSummary(rawSummary) ? '' : rawSummary
+    // Summary: try bibkeys.notes / bibkeys.excerpts first (per-edition);
+    // fall back to the works-record description for books that only
+    // have prose there. Each candidate gets the placeholder heuristic
+    // (3f Tier 1) so AR-code blurbs / distributor rows never survive.
+    const bibkeysSummary = (data.notes && (data.notes.value || data.notes)) ||
+                           (data.excerpts && data.excerpts[0] && data.excerpts[0].text) ||
+                           ''
+    let summary = ''
+    if (bibkeysSummary && !looksLikePlaceholderSummary(bibkeysSummary)) {
+      summary = bibkeysSummary
+    } else if (workDescription && !looksLikePlaceholderSummary(workDescription)) {
+      summary = workDescription
+    }
+
+    // Title: bibkeys returns `title` and `subtitle` as separate fields.
+    // Catalogers' convention (and how AdminBooks stores it) is to
+    // combine them as "Title: Subtitle" — see combineTitle() for the
+    // capitalization rule.
+    const title = combineTitle(data.title, data.subtitle)
 
     return {
       isbn13,
-      title         : data.title || '',
+      title,
       authors,
       publishedYear : pickYear(data.publish_date),
       coverUrl      : verifiedCover,
@@ -407,9 +461,15 @@ async function fromGoogleBooks(isbn13) {
     const rawSummary = v.description || ''
     const summary    = looksLikePlaceholderSummary(rawSummary) ? '' : rawSummary
 
+    // Google Books exposes both v.title and v.subtitle (same shape as
+    // OL bibkeys). Combine for consistency with fromOpenLibrary so
+    // admin-curated "Title: Subtitle" forms don't show up as a
+    // spurious diff just because Google split them.
+    const title = combineTitle(v.title, v.subtitle)
+
     return {
       isbn13,
-      title         : v.title || '',
+      title,
       authors,
       publishedYear : pickYear(v.publishedDate),
       coverUrl      : verifiedCover,
@@ -502,7 +562,7 @@ async function searchOpenLibrary(title, limit) {
 
     const mapped = docs.map((d) => ({
       isbn13       : pickIsbn13(d.isbn),
-      title        : d.title || '',
+      title        : combineTitle(d.title, d.subtitle),
       authors      : Array.isArray(d.author_name) ? d.author_name : [],
       publishedYear: typeof d.first_publish_year === 'number' ? d.first_publish_year : null,
       coverUrl     : d.cover_i ? `${OPEN_LIBRARY_COVERS}/id/${d.cover_i}-L.jpg` : null,
@@ -554,7 +614,7 @@ async function searchGoogleBooks(title, limit) {
 
       return {
         isbn13,
-        title        : v.title || '',
+        title        : combineTitle(v.title, v.subtitle),
         authors,
         publishedYear: pickYear(v.publishedDate),
         coverUrl,
