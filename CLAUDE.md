@@ -922,6 +922,28 @@ Per-user, in the existing user doc:
 
 ## 📝 Session Notes
 
+### 2026-05-20 (late night) — Round 3: HTTPS dev for LAN phone testing
+
+The ISBN scanner threw `navigator.mediaDevices is undefined` when the operator tried to test on their iPhone at `192.168.68.65:5173`. Browser-level cause: iOS Safari only exposes `mediaDevices` in **secure contexts** — HTTPS pages, or `localhost`. A bare-IP LAN URL is not a secure context, so Safari hides the camera API entirely. Production hosting (Firebase Hosting) is HTTPS so the scanner works there fine — the constraint only bites during LAN dev.
+
+Fix: `vite-plugin-mkcert ^2.0.0` added as a dev dependency. On `npm run dev` it auto-generates a local CA (first time only, sudo prompt to install into the system trust store), signs a cert for localhost + the detected LAN IPs, and serves the Vite dev server over HTTPS. `server.host: true` was added so Vite binds to all interfaces (default is 127.0.0.1 only — LAN IPs don't route without this).
+
+**First-run setup for the operator** (one time, then forgotten about):
+
+1. `npm run dev` — mkcert prompts for sudo to install the local CA into the iMac's system keychain. Approve. Cert is then cached at `~/.vite-plugin-mkcert/` and reused on every subsequent dev run.
+2. To trust the CA on the iPhone (one-time per device, ~2 minutes):
+   - Find the root CA at `~/.vite-plugin-mkcert/rootCA.pem` on the iMac.
+   - AirDrop it to the iPhone (or email yourself; AirDrop is faster).
+   - iPhone shows "Profile Downloaded" — open Settings → General → VPN & Device Management → tap the mkcert profile under "Downloaded Profile" → Install (top right) → enter passcode → Install → Done.
+   - Settings → General → About → scroll to **Certificate Trust Settings** → toggle ON for the mkcert root CA → confirm.
+3. On the iPhone, navigate to `https://<iMac-LAN-IP>:5173`. Camera scanner should now work.
+
+If the iPhone refuses to trust even after the toggle: this sometimes happens on iOS 16+ where the cert thinks it expired due to clock drift. Re-AirDrop the freshest `rootCA.pem` and retry — the cached one on the phone may be stale.
+
+Build verification: `npm run build` clean, bundle size unchanged. mkcert is `apply: 'serve'` (Vite plugin convention for dev-only plugins), so production builds bypass it entirely.
+
+No user-facing app behavior changes. Pure dev tooling.
+
 ### 2026-05-20 (night) — Docs site fix (@module tags everywhere)
 
 Operator hit the docs site at `library-loot.web.app/docs/` and saw only source-code views, no actual documentation pages. Diagnosis: every source file had `// ` file-header comments but no `/** @module */` JSDoc block, so `members.modules` was empty during the JSDoc render and only the source-code fallback nav showed up. (MCL Central's docs work because every file there declares `@module`.)
