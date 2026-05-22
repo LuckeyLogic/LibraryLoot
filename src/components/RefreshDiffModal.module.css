@@ -1,0 +1,298 @@
+/* src/components/RefreshDiffModal.module.css
+ *
+ * Refresh-button diff review modal. Shows field-by-field suggested
+ * changes after AdminBooks fires lookupBookByIsbn on an existing
+ * book. Each row has a checkbox + editable new-value input, so the
+ * admin can accept, edit, or reject each change individually.
+ *
+ * Created by Miguel Brown on 5/20/26.
+ * Copyright (c) 2026 Luckey Logic LLC. All rights reserved.
+ */
+
+/* ── BACKDROP ─────────────────────────────────────────────────── */
+
+.backdrop {
+  position        : fixed;
+  inset           : 0;
+  background      : rgba(13, 10, 31, 0.75);
+  backdrop-filter : blur(6px) saturate(140%);
+  display         : flex;
+  align-items     : center;
+  justify-content : center;
+  padding         : var(--space-md);
+  z-index         : 1000;
+}
+
+/* ── MODAL SHELL ──────────────────────────────────────────────── */
+
+.modal {
+  width            : 100%;
+  max-width        : 720px;
+  max-height       : 90vh;
+  background       : var(--night-soft);
+  border           : 2px solid var(--neon-purple);
+  border-radius    : var(--radius-lg);
+  box-shadow       : var(--shadow-glow);
+  display          : flex;
+  flex-direction   : column;
+  overflow         : hidden;
+  color            : var(--hud-white);
+  font-family      : var(--font-body);
+}
+
+.header {
+  display         : flex;
+  align-items     : center;
+  justify-content : space-between;
+  padding         : var(--space-md) var(--space-lg);
+  border-bottom   : 1px solid rgba(157, 78, 221, 0.3);
+  background      : linear-gradient(180deg, var(--night-mid) 0%, var(--night-soft) 100%);
+}
+
+.headerTitle {
+  margin     : 0;
+  font-family: var(--font-display);
+  font-size  : var(--fs-h3);
+  color      : var(--loot-gold);
+  letter-spacing: 0.05em;
+}
+
+.headerSubtitle {
+  margin    : var(--space-xs) 0 0;
+  font-size : var(--fs-small);
+  color     : var(--hud-muted);
+  font-family: var(--font-body);
+}
+
+.closeBtn {
+  background    : transparent;
+  border        : none;
+  color         : var(--hud-muted);
+  font-size     : 1.5rem;
+  cursor        : pointer;
+  padding       : var(--space-xs) var(--space-sm);
+  border-radius : var(--radius-sm);
+  line-height   : 1;
+}
+.closeBtn:hover { color: var(--hud-white); background: rgba(157, 78, 221, 0.15); }
+
+/* ── BODY ─────────────────────────────────────────────────────── */
+
+.body {
+  overflow-y : auto;
+  padding    : var(--space-md) var(--space-lg);
+  flex       : 1;
+  min-height : 0;
+}
+
+.empty {
+  text-align: center;
+  padding   : var(--space-xl) var(--space-md);
+  color     : var(--hud-muted);
+}
+.empty strong {
+  display    : block;
+  font-size  : var(--fs-h3);
+  color      : var(--hud-white);
+  margin-bottom: var(--space-sm);
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+}
+
+/* ── ROW ──────────────────────────────────────────────────────── */
+
+.row {
+  display        : grid;
+  grid-template-columns: auto 1fr;
+  gap            : var(--space-md);
+  padding        : var(--space-md);
+  border         : 1px solid rgba(157, 78, 221, 0.25);
+  border-radius  : var(--radius-md);
+  margin-bottom  : var(--space-md);
+  background     : rgba(13, 10, 31, 0.5);
+}
+.row:last-child { margin-bottom: 0; }
+
+.row.additive    { border-color: rgba(76, 201, 240, 0.5); }
+.row.destructive { border-color: rgba(255, 0, 110, 0.55); }
+.row.replace     { border-color: rgba(255, 182, 39, 0.5); }
+
+.checkboxWrap {
+  display       : flex;
+  align-items   : flex-start;
+  padding-top   : 4px;
+}
+
+.checkbox {
+  width      : 22px;
+  height     : 22px;
+  cursor     : pointer;
+  accent-color: var(--loot-gold);
+}
+
+.rowMain {
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-sm);
+  min-width     : 0;          /* lets nested inputs respect the grid width */
+}
+
+.rowHeader {
+  display    : flex;
+  align-items: baseline;
+  flex-wrap  : wrap;
+  gap        : var(--space-sm);
+}
+
+.fieldLabel {
+  font-family   : var(--font-display);
+  letter-spacing: 0.04em;
+  font-size     : var(--fs-body);
+  color         : var(--hud-white);
+}
+
+.kindChip {
+  display       : inline-block;
+  padding       : 2px var(--space-sm);
+  border-radius : var(--radius-pill);
+  font-size     : var(--fs-micro);
+  font-weight   : 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.kindChip.additive    { background: rgba(76, 201, 240, 0.15);  color: var(--electric-blue-bright); }
+.kindChip.destructive { background: rgba(255, 0, 110, 0.18);   color: #ff5e96;                     }
+.kindChip.replace     { background: rgba(255, 182, 39, 0.18);  color: var(--loot-gold-bright);     }
+
+.hint {
+  font-size  : var(--fs-micro);
+  color      : var(--hud-muted);
+  font-style : italic;
+}
+
+.valueBlock {
+  display       : flex;
+  flex-direction: column;
+  gap           : var(--space-xs);
+}
+
+.valueLabel {
+  font-size     : var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color         : var(--hud-muted);
+  font-weight   : 700;
+}
+
+.oldValue {
+  padding      : var(--space-sm);
+  background   : rgba(13, 10, 31, 0.6);
+  border       : 1px solid rgba(183, 175, 216, 0.15);
+  border-radius: var(--radius-sm);
+  font-size    : var(--fs-small);
+  color        : var(--hud-muted);
+  font-family  : var(--font-mono);
+  white-space  : pre-wrap;
+  word-break   : break-word;
+  max-height   : 8em;
+  overflow-y   : auto;
+}
+.oldValue.empty {
+  font-style  : italic;
+  color       : rgba(183, 175, 216, 0.5);
+  font-family : var(--font-body);
+}
+
+.newInput,
+.newTextarea {
+  width        : 100%;
+  padding      : var(--space-sm);
+  background   : rgba(13, 10, 31, 0.7);
+  border       : 1px solid var(--neon-purple);
+  border-radius: var(--radius-sm);
+  color        : var(--hud-white);
+  font-size    : var(--fs-small);
+  font-family  : var(--font-body);
+  box-sizing   : border-box;
+}
+.newInput:focus,
+.newTextarea:focus {
+  outline       : none;
+  border-color  : var(--loot-gold);
+  box-shadow    : 0 0 0 2px rgba(255, 182, 39, 0.25);
+}
+.newTextarea {
+  min-height: 5em;
+  resize    : vertical;
+  font-family: var(--font-mono);
+}
+
+/* ── FOOTER ───────────────────────────────────────────────────── */
+
+.footer {
+  display         : flex;
+  align-items     : center;
+  justify-content : space-between;
+  gap             : var(--space-md);
+  padding         : var(--space-md) var(--space-lg);
+  border-top      : 1px solid rgba(157, 78, 221, 0.3);
+  background      : linear-gradient(0deg, var(--night-mid) 0%, var(--night-soft) 100%);
+  flex-wrap       : wrap;
+}
+
+.footerCount {
+  color    : var(--hud-muted);
+  font-size: var(--fs-small);
+}
+.footerCount strong { color: var(--hud-white); }
+
+.footerActions {
+  display: flex;
+  gap    : var(--space-sm);
+}
+
+.btn {
+  padding       : var(--space-sm) var(--space-md);
+  border        : none;
+  border-radius : var(--radius-pill);
+  font-family   : var(--font-display);
+  letter-spacing: 0.05em;
+  font-size     : var(--fs-small);
+  cursor        : pointer;
+  text-transform: uppercase;
+}
+
+.btnSecondary {
+  background: transparent;
+  color     : var(--hud-muted);
+  border    : 1px solid var(--hud-muted);
+}
+.btnSecondary:hover { color: var(--hud-white); border-color: var(--hud-white); }
+
+.btnPrimary {
+  background: var(--neon-purple);
+  color     : var(--hud-white);
+}
+.btnPrimary:hover { background: var(--neon-purple-deep); }
+.btnPrimary:disabled {
+  opacity      : 0.5;
+  cursor       : not-allowed;
+}
+
+.btnGhost {
+  background: transparent;
+  color     : var(--loot-gold);
+  border    : 1px solid var(--loot-gold);
+}
+.btnGhost:hover { background: rgba(255, 182, 39, 0.12); }
+
+/* ── MOBILE ───────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .modal     { max-height: 100vh; border-radius: 0; }
+  .header    { padding: var(--space-md); }
+  .body      { padding: var(--space-md); }
+  .footer    { padding: var(--space-md); flex-direction: column; align-items: stretch; }
+  .footerActions { width: 100%; }
+  .footerActions .btn { flex: 1; }
+}

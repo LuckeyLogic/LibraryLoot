@@ -35,6 +35,7 @@ import {
 import { useAuth }                             from '../../context/AuthContext.jsx'
 
 import IsbnScanner                             from '../../components/IsbnScanner.jsx'
+import RefreshDiffModal                        from '../../components/RefreshDiffModal.jsx'
 
 import { storage }                             from '../../firebase'
 import {
@@ -45,6 +46,7 @@ import {
 
 import { isValidIsbn, normalizeIsbn }          from '../../utils/isbn.js'
 import { lookupBookByIsbn }                    from '../../utils/bookLookup.js'
+import { computeBookDiff }                     from '../../utils/bookDiff.js'
 import {
   formatBytes,
   optimizeImage
@@ -137,6 +139,18 @@ export default function AdminBooks() {
   const [saving,      setSaving]      = useState(false)
   const [saveError,   setSaveError]   = useState(null)
 
+  // Refresh-diff modal state. Set to { book, rows } when the user
+  // clicks 🔄 Refresh on an existing book card and the API returns
+  // metadata that differs from what's saved. Null when the modal is
+  // closed. See computeBookDiff() + RefreshDiffModal for the shape
+  // contract.
+  const [refreshDiff, setRefreshDiff] = useState(null)
+  // Surfaces a transient "Already up to date" notice when the user
+  // hits Refresh on a book whose saved data matches the API exactly.
+  // Set inside handleRefresh; cleared by handleEdit / closeForm / a
+  // new lookup attempt.
+  const [refreshNotice, setRefreshNotice] = useState(null)
+
   // ── Live subscription to the catalog ──
   useEffect(() => {
     const unsub = onSnapshot(
@@ -172,6 +186,7 @@ export default function AdminBooks() {
   const performLookup = async (rawIsbn) => {
     setLookupError(null)
     setSaveError(null)
+    setRefreshNotice(null)
 
     if (!isValidIsbn(rawIsbn)) {
       setLookupError('That doesn\'t look like a valid ISBN (10 or 13 digits, hyphens are fine).')
@@ -221,14 +236,24 @@ export default function AdminBooks() {
   }
 
   // ── Refresh metadata from the web for an existing book ──
-  // Re-runs the Open Library + Google Books lookup for the book's ISBN,
-  // opens the edit form pre-filled with the fresh API data, and lets
-  // the admin review/edit before saving. Preserves Storage-backed
-  // cover paths so we don't lose an admin-uploaded image during a
-  // metadata refresh.
+  // Re-runs the Open Library + Google Books lookup for the book's
+  // ISBN, then opens the per-field diff modal so the admin can review
+  // every change individually before applying. Smart defaults
+  // protect existing admin-curated good data from being overwritten
+  // by API-returned garbage:
+  //   - additive  (was empty, API has value) → checked  by default
+  //   - destruct  (was set, heuristic cleared) → unchecked by default
+  //   - replace   (both set, different)        → unchecked by default
+  //
+  // On Apply: handleApplyDiff merges the checked changes into form
+  // state (using each row's possibly-edited current value), opens the
+  // standard edit form for any final tweaks, then Save commits.
+  //
+  // On Cancel (or no diff at all): the book stays exactly as it was.
   const handleRefresh = async (book) => {
     setLookupError(null)
     setSaveError(null)
+    setRefreshNotice(null)
     setLooking(true)
     try {
       const hit = await lookupBookByIsbn(book.isbn13)
@@ -238,17 +263,12 @@ export default function AdminBooks() {
         )
         return
       }
-      setEditingId(book.id)
-      setForm({
-        ...formFromLookup(hit),
-        // Preserve admin-curated cover Storage state — formFromLookup
-        // resets these to null since they're API-sourced. The admin
-        // can still swap to the API-sourced coverUrl manually below.
-        coverStoragePath      : book.coverStoragePath || null,
-        // Honor admin's existing reading-level choice — the API
-        // never returns this and we shouldn't reset it on refresh.
-        readingLevel          : book.readingLevel || ''
-      })
+      const rows = computeBookDiff(book, hit)
+      if (rows.length === 0) {
+        setRefreshNotice(`"${book.title}" is already up to date — the API didn't return anything that differs from the saved data.`)
+        return
+      }
+      setRefreshDiff({ book, rows })
     } catch (e) {
       setLookupError(`Refresh failed: ${e.message || e}`)
     } finally {
@@ -256,8 +276,45 @@ export default function AdminBooks() {
     }
   }
 
+  // Apply the checked diff rows to the form state and open the edit
+  // form so the admin can fine-tune anything before final Save. The
+  // `acceptedChanges` map only includes fields the user explicitly
+  // checked (with their current edited values, possibly tweaked from
+  // the raw API suggestion).
+  const handleApplyDiff = (acceptedChanges) => {
+    if (!refreshDiff) return
+    const { book } = refreshDiff
+    const pick = (k, fallback) => (k in acceptedChanges ? acceptedChanges[k] : fallback)
+
+    setEditingId(book.id)
+    setForm({
+      isbn13                : book.isbn13 || '',
+      title                 : pick('title',         book.title || ''),
+      authors               : pick('authors',       (book.authors || []).join(', ')),
+      publishedYear         : pick('publishedYear', book.publishedYear ? String(book.publishedYear) : ''),
+      coverUrl              : pick('coverUrl',      book.coverUrl || ''),
+      // Preserve admin-curated cover Storage state — refresh never
+      // touches the uploaded cover binary, only the URL field.
+      coverStoragePath      : book.coverStoragePath || null,
+      pendingCoverFile      : null,
+      pendingCoverPreviewUrl: null,
+      summary               : pick('summary',       book.summary || ''),
+      // The API never returns a clean readingLevel enum — preserve
+      // whatever the admin set.
+      readingLevel          : book.readingLevel || '',
+      series                : pick('series',        book.series || ''),
+      seriesNumber          : pick('seriesNumber',  book.seriesNumber != null ? String(book.seriesNumber) : ''),
+      subjects              : pick('subjects',      Array.isArray(book.subjects) ? book.subjects.join(', ') : ''),
+      source                : book.source || 'manual'
+    })
+    setRefreshDiff(null)
+    setSaveError(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   // ── Edit existing ──
   const handleEdit = (book) => {
+    setRefreshNotice(null)
     setEditingId(book.id)
     setForm({
       isbn13                : book.isbn13 || '',
@@ -334,6 +391,7 @@ export default function AdminBooks() {
     setForm(null)
     setEditingId(null)
     setSaveError(null)
+    setRefreshNotice(null)
   }
 
   // ── Save (create or update) ──
@@ -562,6 +620,9 @@ export default function AdminBooks() {
           {lookupError ? (
             <div className={styles.error} role="alert">{lookupError}</div>
           ) : null}
+          {refreshNotice ? (
+            <div className={styles.notice} role="status">{refreshNotice}</div>
+          ) : null}
         </section>
       ) : null}
 
@@ -619,6 +680,16 @@ export default function AdminBooks() {
           </div>
         )}
       </section>
+
+      {/* ── REFRESH DIFF MODAL ── */}
+      {refreshDiff ? (
+        <RefreshDiffModal
+          bookTitle  ={refreshDiff.book.title}
+          initialRows={refreshDiff.rows}
+          onApply    ={handleApplyDiff}
+          onCancel   ={() => setRefreshDiff(null)}
+        />
+      ) : null}
 
     </article>
   )

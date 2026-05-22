@@ -199,3 +199,17 @@
   border-radius: var(--radius-sm);
   font-size    : var(--fs-small);
 }
+
+/* Transient info notice — used for non-error feedback like
+ * "Already up to date" after a no-op refresh. Cyan / hud accent
+ * instead of magenta, so it visually reads as friendly status,
+ * not failure. */
+.notice {
+  margin-top   : var(--space-md);
+  padding      : 0.7rem 0.85rem;
+  background   : rgba(76, 201, 240, 0.10);
+  border       : 1px solid var(--electric-blue);
+  color        : var(--hud-white);
+  border-radius: var(--radius-sm);
+  font-size    : var(--fs-small);
+}

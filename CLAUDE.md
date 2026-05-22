@@ -922,7 +922,34 @@ Per-user, in the existing user doc:
 
 ## 📝 Session Notes
 
-### 2026-05-20 — Data-quality polish (3g done; 3e/3f Tier 1 done)
+### 2026-05-20 (afternoon) — Refresh diff modal + script rinse pass
+
+- **Surfaced from operator testing**: after the morning's Tier 1 heuristic commit landed and the operator re-ran `refresh-book-metadata.js`, Steam Train Dream Train's bad cover URL was still in place. Diagnosis: the script was scoped to ITEM 3d (series/subjects backfill ONLY) and never touched cover/summary fields. The UI Refresh button DID apply the heuristics, but it overwrote the whole form with API values — including manually-curated good prose that the operator had already typed in. Both gaps fixed in this slice.
+- **Script changes** (`scripts/refresh-book-metadata.js`):
+  - Mirrored `verifyCoverUrl`, `looksLikePlaceholderSummary`, `looksLikeGarbageSubject`, and the new `LOC_VOCAB_BLOCKLIST` set from `src/utils/bookLookup.js`. Kept-in-sync-by-hand pattern matches what the script already does for `dedupe` and `parseSeries`.
+  - New two-pass main loop: Pass 1 RINSES existing data (HEAD-checks coverUrl, runs the placeholder heuristic on summary, re-cleans subjects through the now-stricter filter). Pass 2 does the 3d backfill from the API (only when admin hasn't curated `series` already).
+  - **Critical contract**: the script never overwrites GOOD data with API data. It only CLEARS values that the heuristic identifies as bad. The interactive comparison-and-merge lives in the AdminBooks Refresh modal, not here.
+  - Summary line expanded to break out `rinsedFields` vs `backfilledOnly` vs `cleanAlready` so operator re-runs surface what changed honestly.
+- **UI Refresh button changes**: replaced the "API result overwrites the form" behavior with a per-field diff modal.
+  - New `src/utils/bookDiff.js` — `computeBookDiff(existing, fresh)` returns a list of `{field, label, inputType, hint, oldValue, newValue, kind, defaultChecked}` rows for every field that differs. Eight fields are diffed: title, authors, publishedYear, coverUrl, summary, series, seriesNumber, subjects. ReadingLevel is admin-only (never API), source / coverStoragePath / isbn13 are out of scope for the diff.
+  - New `src/components/RefreshDiffModal.jsx` + `.module.css` — modal-style overlay with one row per diff. Each row carries a smart-default checkbox, the old value (read-only display), and an EDITABLE input/textarea prefilled with the new API value (so the admin can tweak before applying). Rationale chip per row in cyan / loot-gold / magenta based on kind. Footer: "Select all" ↔ "Deselect all" toggle, Cancel, Apply selected. Esc closes; backdrop tap closes.
+  - **Smart defaults** (the operator-protection contract):
+    - Populate-empty (was empty, API has value) → ☑ checked. Additive, no risk.
+    - Clear-existing (was set, heuristic-cleared API value) → ☐ unchecked. Protects manually-written prose.
+    - Replace-existing (both set, differ) → ☐ unchecked. Ambiguous, operator chooses.
+  - `handleRefresh` in `AdminBooks.jsx` rewritten: lookup → compute diff → if rows.length is 0 show "Already up to date" notice (new `.notice` style in `Admin.module.css`, cyan accent, distinct from the error magenta); otherwise open modal. Apply merges checked changes into form state and opens the edit form for final tweaks before Save.
+  - **The Steam Train scenario is now safe by default**: if the operator manually wrote a good summary, the Refresh modal shows the row with kind="destructive" and the checkbox defaults to ☐ unchecked. The operator can blindly hit "Apply selected" and the summary stays.
+- **AI fallback (Tier 3 for 3e + 3f) deferred to a follow-up slice**: the operator asked whether Brave / LOOT could auto-find a real cover or summary when the heuristic clears garbage. Right call but meaningfully larger scope (a "🤖 Find via AI" button per row in the diff modal that calls the 9c.3 `searchWeb` + `fetchPage` Cloud Functions). Tracked as Round 2.
+- **vite-plugin-mkcert for HTTPS dev tracked as Round 3** — separate concern, unblocks scanner testing on operator's iPhone over LAN. iOS Safari requires HTTPS for `navigator.mediaDevices`; localhost is exempt but LAN IPs aren't.
+- **Pricing reality (Brave)**: confirmed during 9c.3 deploy — Brave's "free" tier is $5/month auto-applied credits (≈1000 search requests at $5/1000), card required for signup, spend cap can be set to free-tier-only in their dashboard.
+- **Other pending operator follow-ups (still open)**:
+  - Re-run the (now-extended) `refresh-book-metadata.js` to rinse existing books with the new heuristics applied to coverUrl + summary fields.
+  - Spot-check Steam Train Dream Train post-rinse — coverUrl should clear (script returns null after HEAD-checks 404 with `?default=false`), summary should clear (AR-code placeholder caught by heuristic).
+  - Don't push the button! (`9781402287466`): verified during testing — heuristic correctly cleared the OL "K-3 Medialog, Inc. 190 Lexile. 4-8." catalog blurb. Real cover preserved.
+  - Google Books API quota hit `0` during testing — separate issue (GCP project-side enforcement, not the public 100k/day tier). Worth a look at `books.googleapis.com` quota for project `624717413613` when convenient.
+  - App Check provider config cleanup (carried over from earlier sessions).
+
+### 2026-05-20 (morning) — Data-quality polish (3g done; 3e/3f Tier 1 done)
 
 - **Single-file batched PR.** All three heuristics landed in `src/utils/bookLookup.js` — no schema changes, no new deps, no rules touched. The natural compounding follow-up to 9c.3.
 - **9c.3 verification in production happened first.** Three live tests in LOOT all passed cleanly: real Kirkus summary for *Steam Train Dream Train* with cited URL, honest "couldn't find it" on a made-up series, real sponsor-business lookup for a Pemberville pizza place that pivoted to the actual nearby business. CITATION & HONESTY block is sticking; tool routing is selecting the right tool; chips render correctly. Brave key set + functions deployed; spend cap set to free tier in Brave's dashboard.
