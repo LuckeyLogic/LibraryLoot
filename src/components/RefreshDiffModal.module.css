@@ -203,6 +203,96 @@
   font-family : var(--font-body);
 }
 
+/* Header row above the editable input — label on the left, AI button
+ * on the right when the field supports it. Stacks vertically on
+ * narrow screens via the mobile media query at the bottom of this
+ * file. */
+.newValueHeader {
+  display        : flex;
+  align-items    : center;
+  justify-content: space-between;
+  gap            : var(--space-sm);
+  flex-wrap      : wrap;
+}
+
+/* "🤖 Find via AI" button. Mirrors LOOT's gaming-vibe styling but
+ * sits inline with form controls so it doesn't fight for attention
+ * with the primary Apply/Cancel buttons in the footer. */
+.aiBtn {
+  display       : inline-flex;
+  align-items   : center;
+  gap           : var(--space-xs);
+  padding       : 4px var(--space-sm);
+  background    : transparent;
+  border        : 1px solid var(--electric-blue);
+  border-radius : var(--radius-pill);
+  color         : var(--electric-blue-bright);
+  font-family   : var(--font-display);
+  letter-spacing: 0.05em;
+  font-size     : var(--fs-micro);
+  text-transform: uppercase;
+  cursor        : pointer;
+  white-space   : nowrap;
+}
+.aiBtn:hover:not(:disabled) {
+  background   : rgba(76, 201, 240, 0.12);
+  border-color : var(--hud-cyan);
+  color        : var(--hud-cyan);
+}
+.aiBtn:disabled {
+  opacity      : 0.7;
+  cursor       : not-allowed;
+  border-color : var(--hud-muted);
+  color        : var(--hud-muted);
+}
+
+/* Tiny inline spinner shown inside the AI button while it's working. */
+.aiSpinner {
+  display      : inline-block;
+  width        : 12px;
+  height       : 12px;
+  border       : 2px solid rgba(183, 175, 216, 0.3);
+  border-top-color: var(--hud-muted);
+  border-radius: 50%;
+  animation    : ll-ai-spin 0.7s linear infinite;
+}
+@keyframes ll-ai-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Source-URL chip displayed below the input after a successful AI
+ * fetch. Lets the operator click through to verify before applying. */
+.aiSource {
+  display      : inline-flex;
+  align-items  : center;
+  gap          : var(--space-xs);
+  margin-top   : var(--space-xs);
+  padding      : 2px var(--space-sm);
+  background   : rgba(76, 201, 240, 0.10);
+  border       : 1px solid rgba(76, 201, 240, 0.4);
+  border-radius: var(--radius-pill);
+  color        : var(--electric-blue-bright);
+  font-size    : var(--fs-micro);
+  text-decoration: none;
+  align-self   : flex-start;
+  max-width    : 100%;
+  overflow     : hidden;
+  text-overflow: ellipsis;
+  white-space  : nowrap;
+}
+.aiSource:hover { color: var(--hud-cyan); border-color: var(--hud-cyan); }
+
+/* Error message shown below the input when the AI fetch fails. */
+.aiError {
+  margin-top   : var(--space-xs);
+  padding      : var(--space-xs) var(--space-sm);
+  background   : rgba(255, 0, 110, 0.10);
+  border       : 1px solid rgba(255, 0, 110, 0.45);
+  border-radius: var(--radius-sm);
+  color        : #ff5e96;
+  font-size    : var(--fs-micro);
+}
+
 .newInput,
 .newTextarea {
   width        : 100%;
@@ -214,6 +304,11 @@
   font-size    : var(--fs-small);
   font-family  : var(--font-body);
   box-sizing   : border-box;
+}
+.newInput:disabled,
+.newTextarea:disabled {
+  opacity     : 0.6;
+  cursor      : not-allowed;
 }
 .newInput:focus,
 .newTextarea:focus {

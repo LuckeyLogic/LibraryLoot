@@ -922,6 +922,34 @@ Per-user, in the existing user doc:
 
 ## 📝 Session Notes
 
+### 2026-05-20 (evening) — Round 2: AI fallback button in diff rows
+
+After the Round 1.5 diff fixes shipped and the operator verified, jumped into Round 2 — the 🤖 Find via AI button that closes the loop on Kristy and the Snobs's empty summary row. The button pays off the 9c.3 web-search capability for the catalog-editing workflow specifically.
+
+- **New `src/lib/loot/aiFieldFetch.js`** — `findFieldViaAI({book, field})` wrapper around `chatWithLoot`. Sends a focused single-turn prompt with a locked-down output format (`SUMMARY: ...\nSOURCE: ...`), parses the structured response, returns either `{value, source}` or `{error}`. The CITATION & HONESTY block in LOOT's system prompt does the heavy lifting — every value comes with a real URL or the function refuses to surface it.
+- **Sentinel-driven refusal handling.** The prompt explicitly tells LOOT to emit `SUMMARY: (none) / SOURCE: (none)` when no real source is found. `parseStructuredResponse` checks for that and returns `{error: "No real source found..."}`. Also refuses values that come with `SOURCE: (none)` — the whole point of the button is CITED content, never unverified prose.
+- **Field whitelist for the button.** Only fields with a template in `FIELD_PROMPTS` get the button. v1 ships with just `summary`. Cover URL is intentionally NOT included — `fetchPage`'s cheerio extraction strips `<img>` tags during text extraction, so reaching image URLs would need either a new image-search Cloud Function or an enhanced `fetchPage` that returns image URLs alongside text. Tracked as Round 2.5.
+- **DiffRow UI additions** (`RefreshDiffModal.jsx` + `.module.css`):
+  - "🤖 Find via AI" button rendered next to the "New" label when the field is whitelisted. Cyan border + cyan text matches LOOT's chat visual identity so it reads as the same character.
+  - Inline spinner inside the button while the AI works (5-15s typical — searchWeb + fetchPage + Gemini extraction).
+  - Input/textarea is disabled during the fetch so the operator can't fight the result that's coming in.
+  - On success: result populates the editable input, the row's checkbox auto-checks (so the operator doesn't have to remember to tick it), and a "🔗 Source: <hostname>" chip appears below the input. Chip is a real link to the source page (target="_blank") for verification.
+  - On error: red error message below the input. Button flips to "🤖 Try again" so the operator can re-roll. Button text also flips to "🤖 Try again" after a successful fetch — operator can re-roll if the first answer wasn't ideal.
+  - `aiBusy` / `aiError` / `aiSource` carried per-row in modal state so each field fetches independently.
+- **Quota consumption.** Each button click costs 1 web search + ~1 page fetch against the existing 50/day search + 100/day fetch caps from 9c.3. Quota errors surface as `aiError`. Operator can see usage via Firebase Functions logs (`firebase functions:log --only lootWebSearch`) or the `/_loot_meta` Firestore collection.
+- **Pass-through context fix**: modal now takes the whole `book` object (was `bookTitle` only) so `findFieldViaAI` can build the prompt with title + authors + ISBN + year. AdminBooks.jsx wiring updated to match.
+
+The Kristy scenario after this commit:
+- Refresh → modal opens with Summary row (kind="destructive", unchecked).
+- Operator clicks 🤖 Find via AI on the Summary row.
+- LOOT searches Brave for "Kristy and the Snobs by Ann M. Martin book summary", fetches the top promising result (probably the Scholastic page or Goodreads), extracts a real 2-4 sentence kid-appropriate summary, cites the URL.
+- Summary text lands in the input (editable!), source URL appears as a chip below, checkbox auto-checks.
+- Operator can tweak the wording inline, click "Apply selected", form opens with the new summary, hit Save.
+
+Build clean (+1 module for aiFieldFetch.js, +2KB CSS for the new button/source/error styles, +4KB JS). No new deps. No Cloud Function changes — entirely a client-side feature built on top of the 9c.3 backend.
+
+Round 2.5 (cover URL via image search) and Round 3 (vite-plugin-mkcert for HTTPS dev) still pending.
+
 ### 2026-05-20 (late afternoon) — Diff-quality follow-up
 
 Operator hit Refresh on Kristy and the Snobs and the diff modal lit up with 5 rows, ALL defaulting to unchecked — nothing was actionable. Investigation found three real bugs that the modal was correctly surfacing as noise:

@@ -684,7 +684,7 @@ export default function AdminBooks() {
       {/* ── REFRESH DIFF MODAL ── */}
       {refreshDiff ? (
         <RefreshDiffModal
-          bookTitle  ={refreshDiff.book.title}
+          book       ={refreshDiff.book}
           initialRows={refreshDiff.rows}
           onApply    ={handleApplyDiff}
           onCancel   ={() => setRefreshDiff(null)}

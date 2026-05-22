@@ -23,15 +23,27 @@
 import React, { useEffect, useMemo, useState } from 'react'
 
 import { diffKindLabel }                       from '../utils/bookDiff.js'
+import { findFieldViaAI }                      from '../lib/loot/aiFieldFetch.js'
 
 import styles                                  from './RefreshDiffModal.module.css'
+
+/**
+ * Fields for which the "🤖 Find via AI" button is wired in v1. Adding
+ * a field here implies aiFieldFetch.js has a prompt template for it.
+ * Cover URL is intentionally NOT here yet — the existing fetchPage
+ * tool strips images during text extraction, so cover lookup needs a
+ * separate image-search Cloud Function (tracked as Round 2.5).
+ */
+const AI_BUTTON_FIELDS = new Set(['summary'])
 
 /**
  * RefreshDiffModal — review and selectively apply API-suggested
  * metadata changes to an existing book.
  *
  * @param {Object}   props
- * @param {string}   props.bookTitle    Used in the modal header.
+ * @param {Object}   props.book         The book doc currently in Firestore — used
+ *                                      for the modal header and for AI field-fetch
+ *                                      context (title, authors, isbn13).
  * @param {Array}    props.initialRows  Rows from computeBookDiff().
  *                                      Each row: { field, label, inputType, hint,
  *                                      oldValue, newValue, kind, defaultChecked }.
@@ -43,14 +55,19 @@ import styles                                  from './RefreshDiffModal.module.c
  *                                      the modal without applying.
  * @returns {JSX.Element}
  */
-export default function RefreshDiffModal({ bookTitle, initialRows, onApply, onCancel }) {
+export default function RefreshDiffModal({ book, initialRows, onApply, onCancel }) {
 
   // Local row state: each row carries `checked` + `editedValue` on top
-  // of the immutable diff metadata. Initialized from props.
+  // of the immutable diff metadata. AI-related state (aiBusy, aiError,
+  // aiSource) also lives per-row so each field can fetch indepen-
+  // dently and surface its own status. Initialized from props.
   const [rows, setRows] = useState(() => initialRows.map((r) => ({
     ...r,
     checked    : r.defaultChecked,
-    editedValue: r.newValue
+    editedValue: r.newValue,
+    aiBusy     : false,
+    aiError    : null,
+    aiSource   : null
   })))
 
   // Esc key dismisses the modal — matches the LOOT panel pattern.
@@ -75,6 +92,36 @@ export default function RefreshDiffModal({ bookTitle, initialRows, onApply, onCa
 
   const editRow = (i, value) => {
     setRows((prev) => prev.map((r, idx) => idx === i ? { ...r, editedValue: value } : r))
+  }
+
+  // AI fetch handler — fires when the operator hits the 🤖 button on a
+  // supported row. Sets aiBusy, calls aiFieldFetch.findFieldViaAI,
+  // populates editedValue + aiSource on success or aiError on failure.
+  // Auto-checks the row when a successful result lands so the operator
+  // doesn't have to remember to tick the box.
+  const fetchRowViaAI = async (i) => {
+    const row = rows[i]
+    if (!row || row.aiBusy) return
+    setRows((prev) => prev.map((r, idx) => idx === i
+      ? { ...r, aiBusy: true, aiError: null }
+      : r))
+
+    const result = await findFieldViaAI({ book, field: row.field })
+
+    setRows((prev) => prev.map((r, idx) => {
+      if (idx !== i) return r
+      if (result.error) {
+        return { ...r, aiBusy: false, aiError: result.error }
+      }
+      return {
+        ...r,
+        aiBusy     : false,
+        aiError    : null,
+        editedValue: result.value,
+        aiSource   : result.source,
+        checked    : true                // auto-check on success
+      }
+    }))
   }
 
   const toggleAll = () => {
@@ -107,8 +154,8 @@ export default function RefreshDiffModal({ bookTitle, initialRows, onApply, onCa
           <div>
             <h2 className={styles.headerTitle}>Review changes</h2>
             <p className={styles.headerSubtitle}>
-              {bookTitle ? <>For <strong>{bookTitle}</strong></> : null}
-              {bookTitle && rows.length > 0 ? ' · ' : null}
+              {book?.title ? <>For <strong>{book.title}</strong></> : null}
+              {book?.title && rows.length > 0 ? ' · ' : null}
               {rows.length > 0
                 ? `${rows.length} field${rows.length === 1 ? '' : 's'} differ from the API`
                 : null}
@@ -134,10 +181,12 @@ export default function RefreshDiffModal({ bookTitle, initialRows, onApply, onCa
           ) : (
             rows.map((r, i) => (
               <DiffRow
-                key       ={r.field}
-                row       ={r}
-                onToggle  ={() => toggleRow(i)}
-                onEdit    ={(v) => editRow(i, v)}
+                key            ={r.field}
+                row            ={r}
+                onToggle       ={() => toggleRow(i)}
+                onEdit         ={(v) => editRow(i, v)}
+                aiSupported    ={AI_BUTTON_FIELDS.has(r.field)}
+                onFetchViaAI   ={() => fetchRowViaAI(i)}
               />
             ))
           )}
@@ -184,16 +233,31 @@ export default function RefreshDiffModal({ bookTitle, initialRows, onApply, onCa
  * DiffRow — one suggested change. Shows the current value, the
  * editable new value, the change-kind chip, and the checkbox.
  *
+ * When aiSupported is true, also renders a "🤖 Find via AI" button
+ * next to the input — handy for destructive rows where the API came
+ * back empty and the operator wants Brave/LOOT to hunt for a real
+ * value on the open web. Loading + error states surface inline.
+ *
  * @param {Object}   props
- * @param {Object}   props.row       The row state.
- * @param {Function} props.onToggle  Toggle the row's checkbox.
- * @param {Function} props.onEdit    Edit the row's new value.
+ * @param {Object}   props.row           The row state.
+ * @param {Function} props.onToggle      Toggle the row's checkbox.
+ * @param {Function} props.onEdit        Edit the row's new value.
+ * @param {boolean}  props.aiSupported   When true, the 🤖 button renders.
+ * @param {Function} props.onFetchViaAI  Click handler for the 🤖 button.
  * @returns {JSX.Element}
  */
-function DiffRow({ row, onToggle, onEdit }) {
+function DiffRow({ row, onToggle, onEdit, aiSupported, onFetchViaAI }) {
   const kindClass  = styles[row.kind] || ''
   const inputId    = `diff-row-${row.field}`
   const isTextarea = row.inputType === 'textarea'
+
+  // The button label flips after a successful AI fetch ("Try again")
+  // so the operator knows they can re-roll if the first answer
+  // wasn't great. While loading, button is disabled and shows a
+  // working state.
+  const aiButtonLabel = row.aiBusy
+    ? 'Searching…'
+    : (row.aiSource ? '🤖 Try again' : '🤖 Find via AI')
 
   return (
     <div className={`${styles.row} ${kindClass}`}>
@@ -228,7 +292,24 @@ function DiffRow({ row, onToggle, onEdit }) {
         </div>
 
         <div className={styles.valueBlock}>
-          <span className={styles.valueLabel}>New (edit if you want)</span>
+          <div className={styles.newValueHeader}>
+            <span className={styles.valueLabel}>New (edit if you want)</span>
+            {aiSupported ? (
+              <button
+                type      ="button"
+                className ={styles.aiBtn}
+                onClick   ={onFetchViaAI}
+                disabled  ={row.aiBusy}
+                title     ="Have LOOT search the web for a real value"
+                aria-label="Find via AI"
+              >
+                {row.aiBusy ? (
+                  <span className={styles.aiSpinner} aria-hidden="true" />
+                ) : null}
+                {aiButtonLabel}
+              </button>
+            ) : null}
+          </div>
           {isTextarea ? (
             <textarea
               id        ={inputId}
@@ -236,6 +317,7 @@ function DiffRow({ row, onToggle, onEdit }) {
               value     ={row.editedValue}
               onChange  ={(e) => onEdit(e.target.value)}
               rows      ={4}
+              disabled  ={row.aiBusy}
             />
           ) : (
             <input
@@ -244,11 +326,38 @@ function DiffRow({ row, onToggle, onEdit }) {
               className ={styles.newInput}
               value     ={row.editedValue}
               onChange  ={(e) => onEdit(e.target.value)}
+              disabled  ={row.aiBusy}
             />
           )}
+          {row.aiSource ? (
+            <a
+              className ={styles.aiSource}
+              href      ={row.aiSource}
+              target    ="_blank"
+              rel       ="noopener noreferrer"
+              title     ="Open the source page in a new tab to verify"
+            >
+              <span aria-hidden="true">🔗</span> Source: {hostnameFor(row.aiSource)}
+            </a>
+          ) : null}
+          {row.aiError ? (
+            <div className={styles.aiError} role="alert">
+              {row.aiError}
+            </div>
+          ) : null}
         </div>
 
       </div>
     </div>
   )
+}
+
+/**
+ * Pull a hostname out of a URL for the source chip. Best-effort —
+ * falls back to the raw URL truncated to 50 chars if URL parsing
+ * fails. Never throws.
+ */
+function hostnameFor(rawUrl) {
+  try { return new URL(rawUrl).hostname }
+  catch (_e) { return String(rawUrl || '').slice(0, 50) }
 }
